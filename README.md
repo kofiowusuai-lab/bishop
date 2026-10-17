@@ -8,10 +8,17 @@ Version 0.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to
 
 ## Launch Bishop
 
+Install the public repository as a standalone command using [uv](https://docs.astral.sh/uv/):
+
 ```sh
-cd /path/to/bishop
-.venv/bin/bishop
+uv tool install git+https://github.com/kofiowusuai-lab/bishop.git
+uv tool ensurepath
+bishop
 ```
+
+Open a new terminal after `ensurepath` if your shell has not refreshed its PATH. The command works from any folder; state stays in `~/.bishop`. To update later, run `uv tool upgrade bishop-runtime`.
+
+For development in this checkout, activate `.venv` and run `bishop`.
 
 Bishop opens an amber dot-matrix boot panel and an interactive conversation. On first launch, choose a provider with the arrow keys, enter a profile name and model ID, then enter its key privately. Writes and commands can be approved inline. `/help` shows chat commands; `/model` switches saved profiles; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
 
