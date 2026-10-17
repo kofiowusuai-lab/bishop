@@ -1,6 +1,9 @@
 """Bounded chat-completions transport, with no implicit retries or redirects."""
 import copy
 import ipaddress
+import hashlib
+import re
+from . import __version__
 import json
 import math
 import urllib.error
@@ -61,7 +64,7 @@ class ScriptedProvider:
 
 
 class HTTPProvider:
-    def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024):
+    def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024, extra_headers=None):
         parsed = urllib.parse.urlsplit(base_url)
         local = parsed.hostname == 'localhost'
         try:
@@ -79,11 +82,36 @@ class HTTPProvider:
             raise ValueError('invalid max_tokens')
         if api_key is not None and (not isinstance(api_key, str) or '\n' in api_key or '\r' in api_key):
             raise ValueError('invalid provider credential')
+        self.extra_headers = {}
+        if extra_headers is not None:
+            if not isinstance(extra_headers, dict):
+                raise ValueError('invalid provider headers')
+            for name, value in extra_headers.items():
+                if (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9-]+', name)
+                        or name.lower() in ('authorization', 'x-api-key', 'user-agent', 'host', 'content-length', 'x-opencode-session')
+                        or not isinstance(value, str) or any(ord(c) < 32 or ord(c) > 126 for c in value)):
+                    raise ValueError('invalid provider headers')
+                self.extra_headers[name] = value
+        self._opencode = parsed.hostname == 'opencode.ai'
+        self._session_hash = None
         self.url = base_url.rstrip('/') + '/chat/completions'
         self.model, self.api_key = model, api_key
         self.timeout, self.max_tokens = timeout, max_tokens
         # Explicit provider routing; environment proxy credentials cannot be sent accidentally.
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+    def set_session(self, session_id):
+        if not isinstance(session_id, str) or not session_id:
+            raise ValueError('invalid provider session')
+        self._session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()
+
+    def request_headers(self):
+        headers = dict(self.extra_headers)
+        if self._opencode:
+            headers['User-Agent'] = 'bishop-runtime/' + __version__
+            if self._session_hash:
+                headers['X-Opencode-Session'] = self._session_hash
+        return headers
 
     def complete(self, messages, tools):
         wire_messages = [{key: value for key, value in message.items() if key != 'provider_state'} for message in messages]
@@ -97,7 +125,7 @@ class HTTPProvider:
             raise ProviderError('invalid model request') from None
         if len(body) > 2000000:
             raise ProviderError('model request too large')
-        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+        headers = {**self.request_headers(), 'Content-Type': 'application/json', 'Accept': 'application/json'}
         if self.api_key:
             headers['Authorization'] = 'Bearer ' + self.api_key
         request = urllib.request.Request(self.url, data=body, headers=headers, method='POST')

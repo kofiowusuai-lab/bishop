@@ -31,3 +31,20 @@ class ProviderStateTests(unittest.TestCase):
                 self.assertEqual(assistant['provider_state']['output'][0]['encrypted_content'], 'opaque-test-state')
             finally:
                 runtime.close(); memory.close()
+
+    def test_runtime_supplies_stable_actor_scoped_provider_session(self):
+        class SessionProvider(ScriptedProvider):
+            def __init__(self):
+                super().__init__([{'content':'one','tool_calls':[]},{'content':'two','tool_calls':[]}])
+                self.sessions = []
+            def set_session(self, session): self.sessions.append(session)
+        with tempfile.TemporaryDirectory() as root:
+            home = Path(root); init_home(home)
+            provider = SessionProvider()
+            runtime, memory = _runtime(home, load_config(home), provider)
+            try:
+                runtime.run('same','first',actor='owner')
+                runtime.run('same','second',actor='owner')
+                self.assertEqual(provider.sessions,['owner\0same','owner\0same'])
+            finally:
+                runtime.close(); memory.close()

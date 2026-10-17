@@ -4,7 +4,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.2.1 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -20,7 +20,7 @@ Open a new terminal after `ensurepath` if your shell has not refreshed its PATH.
 
 For development in this checkout, activate `.venv` and run `bishop`.
 
-Bishop opens an amber dot-matrix boot panel and an interactive conversation. On first launch, choose a provider with the arrow keys, enter a profile name and model ID, then enter its key privately. Writes and commands can be approved inline. `/help` shows chat commands; `/model` switches saved profiles; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
+Bishop opens an amber dot-matrix boot panel and an interactive conversation. On first launch, choose a provider and plan with the arrow keys, choose how to manage its key, then select a model from its live searchable catalog. Profile names are assigned automatically; only secrets and an optional custom endpoint require text entry. Writes and commands can be approved inline. `/help` shows chat commands; `/model` selects saved profiles and opens the model picker; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
 
 ```sh
 bishop setup                   # add another saved provider/key
@@ -29,7 +29,7 @@ bishop providers use work      # explicitly select one
 bishop preview                 # boot screen, no model call
 ```
 
-Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode chat-compatible and Claude models use separate protocol presets. Pick a model supported by the selected endpoint; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest.
+Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode has Zen, Go and Free plan menus. Model choices automatically select the matching chat, Claude or Responses protocol; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest.
 
 ### Continue with ChatGPT
 
@@ -68,7 +68,7 @@ bishop --home ./bishop-demo demo
 bishop init
 ```
 
-Edit `~/.bishop/config.json`. The default endpoint is `http://127.0.0.1:11434/v1`; set `provider.model` to a tool-capable model already installed in your local model server, or set the environment variable:
+Edit `~/.bishop/config.json`. The default endpoint is `http://127.0.0.1:11434/v1`; use `bishop setup`, select Ollama or LM Studio and pick an installed model. Existing environment-based configurations remain supported for automation:
 
 ```sh
 export BISHOP_MODEL='your-installed-model'
@@ -76,7 +76,9 @@ bishop chat 'List the files in your workspace'
 bishop chat --session project-a
 ```
 
-No model is selected or downloaded automatically. The HTTP adapter implements the chat-completions function-calling subset documented by [Ollama](https://github.com/ollama/ollama/blob/main/docs/api/openai-compatibility.mdx). Other compatible endpoints require your own verification. Remote providers require HTTPS. Set `provider.base_url`, an explicit model and `BISHOP_MODEL_API_KEY` for your chosen endpoint; live calls may incur that provider's charges.
+No model is selected or downloaded automatically. All preset providers expose a model picker. If a catalog cannot be loaded, choose Retry or Back; existing profiles can explicitly retain their current model. Advanced custom endpoints must expose a model catalog. [Catalog behavior and supported protocols](docs/provider-catalogs.md).
+
+The HTTP adapter implements the chat-completions function-calling subset documented by [Ollama](https://github.com/ollama/ollama/blob/main/docs/api/openai-compatibility.mdx). Other compatible endpoints require your own verification. Remote providers require HTTPS. Set `provider.base_url`, an explicit model and `BISHOP_MODEL_API_KEY` for your chosen endpoint; live calls may incur that provider's charges.
 
 Bishop does not automatically load `.env` files. Config holds environment variable names rather than secret values. `bishop init` never overwrites existing config or starts a bot.
 

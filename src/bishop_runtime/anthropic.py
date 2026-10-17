@@ -6,8 +6,8 @@ from .provider import HTTPProvider, ProviderError, _validate_reply
 
 
 class AnthropicProvider(HTTPProvider):
-    def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024):
-        super().__init__(base_url, model, api_key, timeout, max_tokens)
+    def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024, extra_headers=None):
+        super().__init__(base_url, model, api_key, timeout, max_tokens, extra_headers)
         self.url = base_url.rstrip('/') + '/messages'
 
     def _payload(self, messages, tools):
@@ -54,7 +54,7 @@ class AnthropicProvider(HTTPProvider):
         except (TypeError, ValueError, KeyError, AttributeError, UnicodeError):
             raise ProviderError('invalid model request') from None
         if len(body)>2000000: raise ProviderError('model request too large')
-        headers = {'Content-Type':'application/json','Accept':'application/json','anthropic-version':'2023-06-01'}
+        headers = {**self.request_headers(), 'Content-Type':'application/json','Accept':'application/json','anthropic-version':'2023-06-01'}
         if self.api_key: headers['x-api-key'] = self.api_key
         request = urllib.request.Request(self.url,data=body,headers=headers,method='POST')
         try:

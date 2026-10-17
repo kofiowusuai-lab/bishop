@@ -97,3 +97,37 @@ class ProfileTests(unittest.TestCase):
             s.save('a','compatible','https://second.example/v1','m',api_key='second')
             self.assertIsNone(s.credential('a',profile=old))
             self.assertEqual(s.credential('a'),'second')
+
+    def test_staged_clear_and_preset_identity(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = ProfileStore(d)
+            store.save('router', 'compatible', 'https://openrouter.ai/api/v1', 'm', api_key='secret', preset_id='openrouter')
+            self.assertEqual(store.get('router')['preset_id'], 'openrouter')
+            store.save('router', 'compatible', 'https://openrouter.ai/api/v1', 'n', clear_key=True, preset_id='openrouter')
+            self.assertIsNone(store.credential('router'))
+            self.assertEqual(store.get('router')['model'], 'n')
+
+    def test_api_responses_profile_works(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = ProfileStore(d)
+            store.save('gpt', 'responses', 'https://opencode.ai/inference/openai/v1', 'm', api_key='private')
+            self.assertEqual(store.get('gpt')['kind'], 'responses')
+
+    def test_stale_preset_is_removed_on_destination_change(self):
+        from bishop_runtime.onboarding import _preset_for
+        with tempfile.TemporaryDirectory() as d:
+            store = ProfileStore(d)
+            store.save('work','compatible','https://openrouter.ai/api/v1','m',api_key='old',preset_id='openrouter')
+            store.save('work','compatible','https://other.example/v1','m',api_key='new')
+            profile = store.get('work')
+            self.assertIsNone(profile['preset_id'])
+            self.assertEqual(_preset_for(profile),'custom')
+            with self.assertRaises(ValueError):
+                store.save('other','compatible','https://other.example/v1','m',api_key='new',preset_id='openrouter')
+
+    def test_opencode_preset_accepts_only_its_own_plan_routes(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = ProfileStore(d)
+            store.save('go','anthropic','https://opencode.ai/inference/go/anthropic/v1','m',api_key='key',preset_id='opencode-go')
+            with self.assertRaises(ValueError):
+                store.save('go','compatible','https://opencode.ai/inference/openai/v1','m',preset_id='opencode-go')

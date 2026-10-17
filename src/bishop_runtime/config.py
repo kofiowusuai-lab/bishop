@@ -86,6 +86,10 @@ def provider_from_config(config, home=None):
                 return ResponsesProvider('https://api.openai.com/v1', model, ChatGPTAuth(home).access_token,
                                          timeout=p['timeout'], max_tokens=p['max_tokens'])
             credential = store.credential(profile['name'], profile=profile)
+            if profile['kind'] == 'responses':
+                from .responses import APIResponsesProvider
+                return APIResponsesProvider(profile['base_url'], model, credential,
+                                            timeout=p['timeout'], max_tokens=p['max_tokens'])
             if profile['kind'] == 'anthropic':
                 from .anthropic import AnthropicProvider
                 return AnthropicProvider(profile['base_url'], model, credential,

@@ -175,6 +175,9 @@ class Runtime:
             run['model_pending'] = True
             self._save(run)
             try:
+                set_session = getattr(self.provider, 'set_session', None)
+                if callable(set_session):
+                    set_session(run['actor'] + '\0' + run['session_id'])
                 response = self.provider.complete(json.loads(json.dumps(run['messages'])), self.tools.definitions())
                 content, calls = self._validate_response(response, run)
                 provider_state = response.get('provider_state')

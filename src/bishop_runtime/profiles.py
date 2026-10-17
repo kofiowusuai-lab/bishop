@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+import urllib.parse
 from pathlib import Path
 from .provider import HTTPProvider
 
@@ -15,12 +16,36 @@ PRESETS = {
     'ollama': {'label': 'Ollama (local)', 'kind': 'compatible', 'base_url': 'http://127.0.0.1:11434/v1', 'api_key_env': 'OLLAMA_API_KEY'},
     'lmstudio': {'label': 'LM Studio (local)', 'kind': 'compatible', 'base_url': 'http://127.0.0.1:1234/v1', 'api_key_env': 'LM_STUDIO_API_KEY'},
     'opencode': {'label': 'OpenCode Zen (chat-compatible models)', 'kind': 'compatible', 'base_url': 'https://opencode.ai/inference/openai/v1', 'api_key_env': 'OPENCODE_API_KEY'},
+    'opencode-go': {'label': 'OpenCode Go', 'kind': 'compatible', 'base_url': 'https://opencode.ai/inference/go/openai/v1', 'api_key_env': 'OPENCODE_GO_API_KEY'},
+    'opencode-free': {'label': 'OpenCode Free', 'kind': 'compatible', 'base_url': 'https://opencode.ai/inference/openai/v1', 'api_key_env': 'OPENCODE_FREE_API_KEY'},
     'opencode-claude': {'label': 'OpenCode Claude (Messages API)', 'kind': 'anthropic', 'base_url': 'https://opencode.ai/inference/anthropic/v1', 'api_key_env': 'OPENCODE_API_KEY'},
     'openrouter': {'label': 'OpenRouter', 'kind': 'compatible', 'base_url': 'https://openrouter.ai/api/v1', 'api_key_env': 'OPENROUTER_API_KEY'},
     'openai': {'label': 'OpenAI API', 'kind': 'compatible', 'base_url': 'https://api.openai.com/v1', 'api_key_env': 'OPENAI_API_KEY'},
     'anthropic': {'label': 'Claude API', 'kind': 'anthropic', 'base_url': 'https://api.anthropic.com/v1', 'api_key_env': 'ANTHROPIC_API_KEY'},
     'custom': {'label': 'Custom compatible endpoint', 'kind': 'compatible', 'base_url': '', 'api_key_env': 'BISHOP_MODEL_API_KEY'},
 }
+
+
+
+def preset_matches(ident, base_url, kind):
+    """A preset may only resolve credentials within its intended destination."""
+    if ident == 'custom':
+        return True
+    if ident == 'chatgpt':
+        return kind == 'chatgpt' and base_url.rstrip('/') == 'https://api.openai.com/v1'
+    if ident not in PRESETS:
+        return False
+    if ident.startswith('opencode'):
+        parsed = urllib.parse.urlsplit(base_url)
+        segment = 'go/' if ident == 'opencode-go' else ''
+        protocol = 'anthropic' if kind == 'anthropic' else 'openai'
+        return (kind in ('compatible', 'anthropic', 'responses') and parsed.scheme == 'https'
+                and parsed.netloc == 'opencode.ai' and not parsed.query and not parsed.fragment
+                and parsed.path.rstrip('/') == f'/inference/{segment}{protocol}/v1'
+                and (ident != 'opencode-claude' or kind == 'anthropic'))
+    preset = PRESETS[ident]
+    return (base_url.rstrip('/') == preset['base_url']
+            and (kind == preset['kind'] or (ident == 'openai' and kind == 'responses')))
 
 
 def _name(name):
@@ -97,7 +122,7 @@ class ProfileStore:
         return data
 
     def _public(self, profile):
-        result = {key: copy.deepcopy(profile.get(key)) for key in ('name', 'kind', 'base_url', 'model', 'api_key_env')}
+        result = {key: copy.deepcopy(profile.get(key)) for key in ('name', 'kind', 'base_url', 'model', 'api_key_env', 'preset_id')}
         env = result.get('api_key_env')
         secret = self._bound_secret(result)
         result['auth'] = 'environment' if env and os.environ.get(env) else ('saved' if secret else ('oauth' if result['kind'] == 'chatgpt' else 'none'))
@@ -115,9 +140,9 @@ class ProfileStore:
         return self._public(profile)
 
     @_locked
-    def save(self, name, kind, base_url, model, api_key=None, api_key_env=None, select=True):
+    def save(self, name, kind, base_url, model, api_key=None, api_key_env=None, select=True, preset_id=None, clear_key=False):
         _name(name)
-        if kind not in ('compatible', 'anthropic', 'chatgpt'):
+        if kind not in ('compatible', 'anthropic', 'chatgpt', 'responses'):
             raise ValueError('unsupported provider kind')
         if kind == 'chatgpt' and (base_url != 'https://api.openai.com/v1' or api_key is not None or api_key_env is not None):
             raise ValueError('ChatGPT uses its own OAuth credentials and the public OpenAI endpoint')
@@ -127,10 +152,22 @@ class ProfileStore:
             raise ValueError('invalid provider credential')
         if api_key_env is not None and (not isinstance(api_key_env, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,127}', api_key_env)):
             raise ValueError('invalid credential environment variable')
+        if preset_id is not None and preset_id not in PRESETS and preset_id != 'chatgpt':
+            raise ValueError('unknown provider preset')
+        if type(clear_key) is not bool or (clear_key and api_key is not None):
+            raise ValueError('invalid credential action')
         data = self._data()
         secrets = self._read(self.secrets_path, {})
-        data['profiles'][name] = {'name':name, 'kind':kind, 'base_url':base_url.rstrip('/'), 'model':model, 'api_key_env':api_key_env}
-        if api_key is not None:
+        previous = data['profiles'].get(name, {})
+        if preset_id is not None and not preset_matches(preset_id, base_url, kind):
+            raise ValueError('provider preset does not match endpoint and protocol')
+        retained_preset = previous.get('preset_id')
+        if not preset_matches(retained_preset, base_url, kind):
+            retained_preset = None
+        data['profiles'][name] = {'name':name, 'kind':kind, 'base_url':base_url.rstrip('/'), 'model':model, 'api_key_env':api_key_env, 'preset_id':preset_id or retained_preset}
+        if clear_key:
+            secrets.pop(name, None)
+        elif api_key is not None:
             secrets[name] = {'kind':kind, 'base_url':base_url.rstrip('/'), 'api_key':api_key}
         elif not self._bound_secret(data['profiles'][name]):
             secrets.pop(name, None)

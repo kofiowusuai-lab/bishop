@@ -1,4 +1,4 @@
-"""Streaming public Responses transport for Bishop's independent tool loop."""
+"""Streaming Responses transports for API keys and isolated ChatGPT OAuth."""
 import copy
 import json
 import time
@@ -6,14 +6,14 @@ import urllib.error
 import urllib.request
 from .provider import HTTPProvider, ProviderError, _validate_reply
 
-class ResponsesProvider(HTTPProvider):
-    def __init__(self, base_url, model, token_source, timeout=30, max_tokens=1024):
-        super().__init__(base_url, model, timeout=timeout, max_tokens=max_tokens)
+class APIResponsesProvider(HTTPProvider):
+    """Responses-compatible API-key transport; never accepts OAuth routing."""
+    def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024, extra_headers=None):
+        super().__init__(base_url, model, api_key, timeout, max_tokens, extra_headers)
         self.url = base_url.rstrip('/') + '/responses'
-        self.token_source = token_source
-        # OAuth tokens must never be routed to configurable remote providers.
-        if self.url != 'https://api.openai.com/v1/responses':
-            raise ValueError('ChatGPT OAuth requires the public OpenAI endpoint')
+
+    def _credential(self):
+        return self.api_key
 
     @staticmethod
     def _state_output(output):
@@ -65,10 +65,13 @@ class ResponsesProvider(HTTPProvider):
         body = json.dumps(payload, allow_nan=False).encode()
         if len(body) > 2000000:
             raise ProviderError('model request too large')
-        token = self.token_source()
-        if not isinstance(token, str) or not token or '\r' in token or '\n' in token:
-            raise ProviderError('invalid ChatGPT credential')
-        request = urllib.request.Request(self.url, data=body, headers={'Content-Type': 'application/json', 'Accept': 'text/event-stream', 'Authorization': 'Bearer ' + token})
+        token = self._credential()
+        if token is not None and (not isinstance(token, str) or '\r' in token or '\n' in token):
+            raise ProviderError('invalid model credential')
+        headers = {**self.request_headers(), 'Content-Type': 'application/json', 'Accept': 'text/event-stream'}
+        if token:
+            headers['Authorization'] = 'Bearer ' + token
+        request = urllib.request.Request(self.url, data=body, headers=headers)
         try:
             completed = None
             with self.opener.open(request, timeout=self.timeout) as response:
@@ -77,7 +80,7 @@ class ResponsesProvider(HTTPProvider):
                 deadline = time.monotonic() + self.timeout
                 while True:
                     if time.monotonic() >= deadline:
-                        raise ProviderError('ChatGPT stream exceeded total time limit')
+                        raise ProviderError('model stream exceeded total time limit')
                     chunk = response.read1(65536)
                     total += len(chunk)
                     if total > 2000000:
@@ -93,7 +96,7 @@ class ResponsesProvider(HTTPProvider):
                                 event = json.loads('\n'.join(data))
                                 kind = event.get('type')
                                 if kind in ('response.failed', 'response.incomplete', 'error'):
-                                    raise ProviderError('ChatGPT response failed or was incomplete')
+                                    raise ProviderError('model response failed or was incomplete')
                                 if kind == 'response.completed':
                                     completed = event['response']
                                 data = []
@@ -104,7 +107,7 @@ class ResponsesProvider(HTTPProvider):
                     if completed is not None:
                         break
             if completed is None:
-                raise ProviderError('ChatGPT stream ended without completion')
+                raise ProviderError('model stream ended without completion')
             text, calls = [], []
             output = self._state_output(completed['output'])
             for item in output:
@@ -118,8 +121,23 @@ class ResponsesProvider(HTTPProvider):
         except urllib.error.HTTPError as error:
             status = error.code
             error.close()
-            raise ProviderError('ChatGPT HTTP error ' + str(status)) from None
+            raise ProviderError('model HTTP error ' + str(status)) from None
         except ProviderError:
             raise
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
-            raise ProviderError('ChatGPT transport or protocol failure') from None
+            raise ProviderError('model transport or protocol failure') from None
+
+
+class ResponsesProvider(APIResponsesProvider):
+    """ChatGPT OAuth transport pinned to the public OpenAI endpoint."""
+    def __init__(self, base_url, model, token_source, timeout=30, max_tokens=1024):
+        super().__init__(base_url, model, timeout=timeout, max_tokens=max_tokens)
+        if self.url != 'https://api.openai.com/v1/responses':
+            raise ValueError('ChatGPT OAuth requires the public OpenAI endpoint')
+        self.token_source = token_source
+
+    def _credential(self):
+        token = self.token_source()
+        if not isinstance(token, str) or not token or '\r' in token or '\n' in token:
+            raise ProviderError('invalid ChatGPT credential')
+        return token

@@ -17,3 +17,9 @@ Live model calls, real Telegram delivery and a live dashboard ingestion pass wer
 The update adds branded boot and interactive chat, exact inline approvals, named provider/key profiles, native Anthropic Messages and Bishop-owned ChatGPT OAuth/public Responses support. Verification includes actual PTY arrow navigation, private profile endpoint binding, simulated browser callbacks, signed JWT identity validation, account model catalog parsing and continuation state across an actual approval/restart.
 
 104 tests pass locally. Wheel installation, boot preview and offline demo are validated in a separate environment. Live ChatGPT authorization, provider inference and real Telegram remain unverified. No existing Hermes/Codex credentials were imported.
+
+## Bishop 0.2.1 choice-driven setup
+
+142 tests pass locally, including a matrix for every supported provider/preset and all custom transport kinds. Real PTY tests cover search, scrolling, rapid arrows, cancellation and zero-size terminal fallback. Live public OpenRouter/OpenCode catalogs were read without keys or inference. API keys remain staged until the model choice is confirmed, and stale preset routing cannot redirect a saved key. Unsupported generation/batch/native protocols are excluded from the picker.
+
+The update adds API-key Responses support and Bishop-specific OpenCode conversation headers. Real authenticated model inference remains outside this verification.
