@@ -8,13 +8,13 @@ import shutil
 import sys
 import unicodedata
 
-# Custom monoline lettering echoes the bishop's engraved diagonal and clean plinth.
+# Solid five-row lettering: a continuous left stem keeps B distinct from 8.
 _WORDMARK = (
-    '┌──╮   ┬  ╭────  ╷   ╷  ╭───╮  ┌───╮',
-    '│  │   │  │      │   │  │   │  │   │',
-    '├──┴╮  │  ╰───╮  ├───┤  │   │  ├───╯',
-    '│   │  │      │  │   │  │   │  │',
-    '└───╯  ┴  ────╯  ╵   ╵  ╰───╯  ╵',
+    '████▄  ███  ▄████  ██ ██  ▄███▄  ████▄',
+    '██ ██   █   ██     ██ ██  ██ ██  ██ ██',
+    '████▄   █   ▀███▄  █████  ██ ██  ████▀',
+    '██ ██   █      ██  ██ ██  ██ ██  ██',
+    '████▀  ███  ████▀  ██ ██  ▀███▀  ██',
 )
 # Consume complete OSC/DCS sequences before generic escapes, including ST.
 _ESCAPE = re.compile(r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[P^_].*?\x1b\\|\x1b\[[0-?]*[ -/]*[@-~]|\x1b[@-_]', re.DOTALL)
