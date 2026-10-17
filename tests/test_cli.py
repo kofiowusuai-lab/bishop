@@ -39,3 +39,26 @@ class CLITests(unittest.TestCase):
             result = self.command(home, '--help')
             self.assertEqual(result.returncode, 0)
             self.assertIn('telegram', result.stdout)
+
+    def test_default_launch_explains_setup_and_preview(self):
+        with tempfile.TemporaryDirectory() as home:
+            result = self.command(home)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('BISHOP', result.stdout)
+            self.assertIn('setup', result.stdout)
+            result = self.command(home, 'preview')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('Available tools', result.stdout)
+
+    def test_profile_commands_no_credentials_printed(self):
+        from bishop_runtime.profiles import ProfileStore
+        with tempfile.TemporaryDirectory() as home:
+            self.command(home, 'init')
+            ProfileStore(home).save('test', 'compatible', 'http://localhost:11434/v1', 'fake-model', api_key='private-synthetic')
+            result = self.command(home, 'providers', 'list')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('fake-model', result.stdout)
+            self.assertNotIn('private-synthetic', result.stdout)
+            result = self.command(home, 'auth', 'status')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn('private-synthetic', result.stdout)

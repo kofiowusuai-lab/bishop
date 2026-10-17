@@ -72,7 +72,26 @@ def load_config(home):
     return config
 
 
-def provider_from_config(config):
+def provider_from_config(config, home=None):
+    if home is not None:
+        from .profiles import ProfileStore
+        store = ProfileStore(home)
+        profile = store.active()
+        if profile:
+            model = profile['model']
+            p = config['provider']
+            if profile['kind'] == 'chatgpt':
+                from .oauth import ChatGPTAuth
+                from .responses import ResponsesProvider
+                return ResponsesProvider('https://api.openai.com/v1', model, ChatGPTAuth(home).access_token,
+                                         timeout=p['timeout'], max_tokens=p['max_tokens'])
+            credential = store.credential(profile['name'], profile=profile)
+            if profile['kind'] == 'anthropic':
+                from .anthropic import AnthropicProvider
+                return AnthropicProvider(profile['base_url'], model, credential,
+                                         timeout=p['timeout'], max_tokens=p['max_tokens'])
+            return HTTPProvider(profile['base_url'], model, credential,
+                                timeout=p['timeout'], max_tokens=p['max_tokens'])
     p = config['provider']
     return HTTPProvider(p['base_url'], os.environ.get('BISHOP_MODEL') or p['model'],
                         api_key=os.environ.get(p['api_key_env']), timeout=p['timeout'], max_tokens=p['max_tokens'])

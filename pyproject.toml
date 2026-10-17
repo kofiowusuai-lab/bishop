@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bishop-runtime"
-version = "0.1.0"
+version = "0.2.0"
 description = "An independent, durable personal agent runtime with explicit tool approvals and audit trails"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "kofiowusuai-lab"}]
-dependencies = ["agent-experience-kit @ git+https://github.com/kofiowusuai-lab/agent-experience-kit.git@a6d602260c6dde45c9eee1e2d279d7f6eb66750f"]
+dependencies = ["PyJWT[crypto]>=2.10,<3", "agent-experience-kit @ git+https://github.com/kofiowusuai-lab/agent-experience-kit.git@a6d602260c6dde45c9eee1e2d279d7f6eb66750f"]
 
 [project.scripts]
 bishop = "bishop_runtime.cli:main"

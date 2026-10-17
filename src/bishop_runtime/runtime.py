@@ -177,12 +177,20 @@ class Runtime:
             try:
                 response = self.provider.complete(json.loads(json.dumps(run['messages'])), self.tools.definitions())
                 content, calls = self._validate_response(response, run)
+                provider_state = response.get('provider_state')
+                if provider_state is not None:
+                    encoded_state = json.dumps(provider_state, ensure_ascii=False, allow_nan=False).encode('utf-8')
+                    if not isinstance(provider_state, dict) or len(encoded_state) > 500000:
+                        raise ValueError('invalid provider continuation state')
+                    provider_state = json.loads(encoded_state)
             except Exception:
                 run['model_pending'] = False
                 self._fail(run, 'provider_failed')
                 return
             run['model_pending'] = False
             assistant = {'role': 'assistant', 'content': content}
+            if provider_state is not None:
+                assistant['provider_state'] = provider_state
             if calls:
                 assistant['tool_calls'] = [{'id': call['id'], 'type': 'function', 'function': {'name': call['name'], 'arguments': json.dumps(call['arguments'], ensure_ascii=False)}} for call in calls]
                 run['messages'].append(assistant)

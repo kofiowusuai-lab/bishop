@@ -86,7 +86,8 @@ class HTTPProvider:
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
 
     def complete(self, messages, tools):
-        payload = {'model': self.model, 'messages': messages, 'stream': False, 'max_tokens': self.max_tokens}
+        wire_messages = [{key: value for key, value in message.items() if key != 'provider_state'} for message in messages]
+        payload = {'model': self.model, 'messages': wire_messages, 'stream': False, 'max_tokens': self.max_tokens}
         if tools:
             payload['tools'] = tools
             payload['tool_choice'] = 'auto'

@@ -18,7 +18,7 @@ def _runtime(home, config, provider=None):
     from .memory import MemoryStore
     from .runtime import Runtime
     from .tools import ToolRegistry
-    selected_provider = provider if provider is not None else provider_from_config(config)
+    selected_provider = provider if provider is not None else provider_from_config(config, home=home)
     memory = MemoryStore(home / 'memory.db')
     tools = ToolRegistry(home / 'workspace', memory, home / 'skills',
                          allow_write=config['allow_write'], allow_command=config['allow_command'])
@@ -86,7 +86,24 @@ def parser():
     p = argparse.ArgumentParser(prog='bishop', description='Bishop independent agent runtime')
     p.add_argument('--actor', default='local', help='local operator identity; privileged host recovery can specify telegram:USER_ID')
     p.add_argument('--home', type=Path, default=None, help='state directory (default ~/.bishop; demo defaults to fresh temporary directory)')
-    commands = p.add_subparsers(dest='command', required=True)
+    p.add_argument('--no-color', action='store_true', help='disable terminal colors')
+    commands = p.add_subparsers(dest='command')
+    commands.add_parser('setup', help='add a saved provider with private key entry')
+    commands.add_parser('preview', help='show the Bishop startup screen without model calls')
+    profiles = commands.add_parser('providers', help='manage multiple saved providers and keys')
+    profile_commands = profiles.add_subparsers(dest='profile_command', required=True)
+    profile_commands.add_parser('list')
+    profile_commands.add_parser('add')
+    for operation in ('use', 'remove'):
+        sub = profile_commands.add_parser(operation); sub.add_argument('name')
+    auth = commands.add_parser('auth', help='Bishop-owned ChatGPT account OAuth')
+    auth_commands = auth.add_subparsers(dest='auth_command', required=True)
+    auth_login = auth_commands.add_parser('login')
+    auth_login.add_argument('--model', help='model available to your ChatGPT account')
+    auth_login.add_argument('--name', default='chatgpt')
+    auth_login.add_argument('--no-browser', action='store_true')
+    auth_commands.add_parser('status')
+    auth_commands.add_parser('logout')
     commands.add_parser('init', help='initialize private local configuration; no network')
     commands.add_parser('demo', help='run deterministic offline tool/approval/audit demo')
     chat = commands.add_parser('chat', help='send one turn to the configured model, or interactive chat')
@@ -119,11 +136,80 @@ def _read_bounded(path, size=100000):
     return content
 
 
+
+def _boot(home, config, session='local'):
+    from . import __version__
+    from .profiles import ProfileStore
+    from .skills import SkillStore
+    from .tools import ToolRegistry
+    from .terminal import print_boot
+    profile = ProfileStore(home).active()
+    tools = ToolRegistry(home / 'workspace', None, home / 'skills',
+                         allow_write=config['allow_write'], allow_command=config['allow_command'])
+    print_boot({'version': __version__, 'profile': profile['name'] if profile else 'not configured',
+                'provider': profile['kind'] if profile else 'local compatible',
+                'model': profile['model'] if profile else (os.environ.get('BISHOP_MODEL') or config['provider']['model'] or 'choose with bishop setup'),
+                'tools': [tool['function']['name'] for tool in tools.definitions()],
+                'skills': [skill['name'] for skill in SkillStore(home / 'skills').list()],
+                'home': str(home), 'session': session})
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     home = (args.home or Path('~/.bishop')).expanduser().resolve()
     runtime = memory = service = None
     try:
+        if args.no_color:
+            os.environ['NO_COLOR'] = '1'
+        if args.command in (None, 'preview', 'setup', 'providers', 'auth'):
+            init_home(home)
+            config = load_config(home)
+            if args.command in (None, 'preview'):
+                _boot(home, config)
+                if args.command == 'preview':
+                    return 0
+                if not sys.stdin.isatty() or not sys.stdout.isatty():
+                    print('Run bishop setup to add a provider, then bishop in an interactive terminal.')
+                    return 0
+                from .profiles import ProfileStore
+                if not ProfileStore(home).active() and not (os.environ.get('BISHOP_MODEL') or config['provider']['model']):
+                    from .onboarding import setup
+                    if setup(home) is None:
+                        return 0
+                    _boot(home, config)
+                runtime, memory = _runtime(home, config)
+                from .shell import run_chat
+                run_chat(runtime, home, config, actor=args.actor)
+                return 0
+            if args.command == 'setup':
+                from .onboarding import setup
+                setup(home)
+                return 0
+            if args.command == 'providers':
+                from .onboarding import list_profiles, setup
+                from .profiles import ProfileStore
+                if args.profile_command == 'list': list_profiles(home)
+                elif args.profile_command == 'add': setup(home)
+                else:
+                    getattr(ProfileStore(home), 'select' if args.profile_command == 'use' else 'remove')(args.name)
+                    print('Provider profile ' + args.profile_command + ' completed.')
+                return 0
+            if args.command == 'auth':
+                from .oauth import ChatGPTAuth
+                from .profiles import ProfileStore
+                from .terminal import safe_text
+                auth = ChatGPTAuth(home)
+                if args.auth_command == 'status': _emit(auth.status())
+                elif args.auth_command == 'logout': _emit(auth.logout())
+                else:
+                    auth.login(open_browser=not args.no_browser, notify=lambda message: print(safe_text(message)))
+                    from .onboarding import choose_chatgpt_model
+                    model = args.model or choose_chatgpt_model(auth)
+                    if model is None:
+                        return 0
+                    ProfileStore(home).save(args.name, 'chatgpt', 'https://api.openai.com/v1', model)
+                    print('ChatGPT profile saved. Run bishop to begin.')
+                return 0
         if args.command == 'init':
             _emit({'config': str(init_home(home)), 'network': 'not contacted'})
             return 0
@@ -137,19 +223,9 @@ def main(argv=None):
             if args.text is not None:
                 _emit(runtime.run(args.session, args.text, actor=args.actor))
             else:
-                print('Bishop interactive chat. /exit quits. Approval commands are run from a separate terminal.')
-                while True:
-                    try:
-                        text = input('You> ')
-                    except EOFError:
-                        break
-                    if text.strip() == '/exit':
-                        break
-                    if text.strip():
-                        result = runtime.run(args.session, text, actor=args.actor)
-                        _emit(result)
-                        if result['status'] != 'completed':
-                            break
+                from .shell import run_chat
+                _boot(home, config, session=args.session)
+                run_chat(runtime, home, config, session=args.session, actor=args.actor)
         elif args.command == 'sessions':
             _emit(runtime.sessions())
         elif args.command == 'status':
@@ -203,10 +279,14 @@ def main(argv=None):
     except KeyboardInterrupt:
         print('Bishop stopped; durable state preserved.', file=sys.stderr)
         return 130
+    except EOFError:
+        print('Bishop setup cancelled.', file=sys.stderr)
+        return 0
     except (ValueError, RuntimeError, OSError) as exc:
         # Known errors are operator-safe; OS error text can contain paths/content.
         message = 'local operation failed' if isinstance(exc, OSError) else str(exc)
-        print('Bishop: ' + message, file=sys.stderr)
+        from .terminal import safe_text
+        print('Bishop: ' + safe_text(message), file=sys.stderr)
         return 1
     finally:
         if service is not None:

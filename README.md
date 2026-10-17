@@ -4,7 +4,37 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.1 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+
+## Launch Bishop
+
+```sh
+cd /path/to/bishop
+.venv/bin/bishop
+```
+
+Bishop opens an amber dot-matrix boot panel and an interactive conversation. On first launch, choose a provider with the arrow keys, enter a profile name and model ID, then enter its key privately. Writes and commands can be approved inline. `/help` shows chat commands; `/model` switches saved profiles; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
+
+```sh
+bishop setup                   # add another saved provider/key
+bishop providers list          # redacted saved profiles
+bishop providers use work      # explicitly select one
+bishop preview                 # boot screen, no model call
+```
+
+Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode chat-compatible and Claude models use separate protocol presets. Pick a model supported by the selected endpoint; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest.
+
+### Continue with ChatGPT
+
+```sh
+bishop auth login              # browser OAuth, then account-specific model picker
+bishop auth status
+bishop auth logout
+```
+
+You can also choose **Continue with ChatGPT** in setup. Bishop registers its own OAuth client and keeps its own tokens; its independent runtime calls the public Responses API directly. It does not run Codex or reuse Hermes credentials. Login eligibility, available models and plan limits come from OpenAI. The adapter preserves reasoning continuation across tool approvals and restarts. [OAuth details and official sources](docs/chatgpt-oauth.md).
+
+Authentication is tested with simulated browser callbacks and signed test tokens. Real account login and live model inference require your own acceptance check. Setup never makes a test inference request. API-key providers can charge for tasks you submit.
 
 ## Try it without credentials
 
@@ -17,7 +47,7 @@ python -m pip install .
 bishop demo
 ```
 
-The deterministic demo uses the **real runtime and tools**, with explicitly scripted model responses. It reads a brief, pauses before writing, approves the exact call, resumes, reopens persistent state and checks the AEK outbox. It uses a new temporary home and contacts no model or Telegram service. It does not demonstrate live model quality.
+The `demo` command is a diagnostic, not the interactive agent launch. It uses the **real runtime and tools**, with explicitly scripted model responses. It reads a brief, pauses before writing, approves the exact call, resumes, reopens persistent state and checks the AEK outbox. It uses a new temporary home and contacts no model or Telegram service. It does not demonstrate live model quality.
 
 To keep demo files in a chosen empty directory:
 

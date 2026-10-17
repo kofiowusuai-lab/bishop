@@ -6,6 +6,9 @@ Use `bishop --home PATH ...` for a separate installation. Default `~/.bishop` co
 
 - `config.json`: model endpoint, credential environment names, tool flags and Telegram allowlist.
 - `runtime.db`: conversations, tool calls/results, approvals, run status and leases.
+- `profiles.json`: named endpoints, models, protocol and selected profile; no key values.
+- `credentials.json`: private API keys bound to exact endpoint/protocol.
+- `auth/chatgpt.json`: Bishop-owned OAuth registration and rotating tokens.
 - `memory.db`: explicit actor-scoped memories.
 - `audit.db`: AEK checkpoints, reviews and sanitized sync outbox.
 - `telegram.db`: authorized inbox, cursor, delivery journal and poller lease.
