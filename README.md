@@ -6,7 +6,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.3.1 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.3.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -37,7 +37,7 @@ Use `bishop model` for the active provider model catalog and `bishop providers s
 
 [Full command reference and Hermes capability comparison](docs/command-capabilities.md) distinguishes working commands from systems still to build.
 
-Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode has Zen, Go and Free plan menus. Model choices automatically select the matching chat, Claude or Responses protocol; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest.
+Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode has Zen, Go and Free plan menus. Model choices automatically select the matching chat, Claude or Responses protocol; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest. Known paid API routes require a configured key before inference. Public model catalogs can list models without a key; this does not authenticate the profile. `bishop doctor` warns when the selected paid provider has no key.
 
 ### Continue with ChatGPT
 

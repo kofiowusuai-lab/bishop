@@ -74,7 +74,7 @@ def load_config(home):
 
 def provider_from_config(config, home=None):
     if home is not None:
-        from .profiles import ProfileStore
+        from .profiles import ProfileStore, required_api_key_provider
         store = ProfileStore(home)
         profile = store.active()
         if profile:
@@ -86,6 +86,9 @@ def provider_from_config(config, home=None):
                 return ResponsesProvider('https://api.openai.com/v1', model, ChatGPTAuth(home).access_token,
                                          timeout=p['timeout'], max_tokens=p['max_tokens'])
             credential = store.credential(profile['name'], profile=profile)
+            required = required_api_key_provider(profile)
+            if required and not credential:
+                raise ValueError(required + ' requires an API key. Run bishop setup, select this provider, edit its profile and enter the key privately.')
             if profile['kind'] == 'responses':
                 from .responses import APIResponsesProvider
                 return APIResponsesProvider(profile['base_url'], model, credential,

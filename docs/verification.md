@@ -37,3 +37,7 @@ Independent review identified incomplete profile validation and malformed URL ha
 ## Bishop 0.3.1 direct model selection
 
 164 tests pass locally. `bishop model` and interactive `/model` open the active provider's catalog directly; `bishop providers select` keeps saved-provider switching available. New regressions verify no extra provider/action menus, cancellation without changes, saved-key retention and the correct home for ChatGPT's account catalog. Independent review found no remaining actionable regressions. One initial full-suite run hit the existing command-tool test's 0.2-second interpreter-start timeout; the isolated tool suite and complete rerun both passed. No live model inference or authentication was performed.
+
+## Bishop 0.3.2 missing-key preflight
+
+168 tests pass locally. An OpenCode Go profile without a configured credential now fails before live adapter construction, with private setup guidance. Doctor warns about the missing key. Regression coverage spans known paid presets, saved keys, keyless local/free/custom routes and sanitized doctor output. Independent review confirmed exact route matching does not widen credential routing. Secret scan passes. The reported user's active Go profile was inspected through credential-presence metadata only; no keys were imported and no paid inference request was made. Successful real inference still requires the user to enter their key.

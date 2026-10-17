@@ -48,6 +48,17 @@ def preset_matches(ident, base_url, kind):
             and (kind == preset['kind'] or (ident == 'openai' and kind == 'responses')))
 
 
+def required_api_key_provider(profile):
+    """Known paid API routes need a key; local/custom/free routes may be keyless."""
+    ident = profile.get('preset_id')
+    if ident == 'opencode-free' and preset_matches(ident, profile.get('base_url', ''), profile.get('kind')):
+        return None
+    for candidate in ('opencode-go', 'opencode', 'opencode-claude', 'openrouter', 'anthropic', 'openai'):
+        if preset_matches(candidate, profile.get('base_url', ''), profile.get('kind')):
+            return PRESETS[candidate]['label']
+    return None
+
+
 def _name(name):
     if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', name):
         raise ValueError('profile name must use letters, numbers, underscores or hyphens')

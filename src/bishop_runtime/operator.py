@@ -71,7 +71,7 @@ def _origin(value):
 def _profile(home):
     if not home.is_dir():
         return None
-    from .profiles import ProfileStore
+    from .profiles import ProfileStore, required_api_key_provider
     try:
         value = ProfileStore(home).active()
         if value is None:
@@ -83,7 +83,8 @@ def _profile(home):
             raise ValueError()
         return {'name': safe_text(value['name']), 'kind': value['kind'],
                 'model': safe_text(value['model']), 'endpoint_origin': _origin(value.get('base_url')),
-                'auth': value['auth']}
+                'auth': value['auth'], 'credential_required': bool(required_api_key_provider(value)),
+                'has_credential': value['has_credential']}
     except (ValueError, TypeError, KeyError, AttributeError):
         raise ValueError('invalid provider profile configuration') from None
 
@@ -120,6 +121,10 @@ def report(home, command, skill_name=None):
             selected = bool(profile or os.environ.get('BISHOP_MODEL') or config['provider']['model'])
             checks.append({'name': 'model', 'status': 'pass' if selected else 'warn',
                            'message': 'Model configured; availability not checked' if selected else 'Choose a model with bishop model'})
+            if profile and profile['credential_required']:
+                configured = profile['has_credential']
+                checks.append({'name': 'credential', 'status': 'pass' if configured else 'warn',
+                               'message': 'API key configured; validity not checked' if configured else 'API key missing. Run bishop setup and enter the provider key privately.'})
         except ValueError:
             checks.append({'name': 'configuration', 'status': 'fail', 'message': 'Invalid local configuration'})
         ok = not any(item['status'] == 'fail' for item in checks)
