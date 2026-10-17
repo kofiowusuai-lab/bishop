@@ -4,6 +4,9 @@ import sys
 from .terminal import safe_text
 
 HELP = '''/help                  Show commands
+/version               Show running and installed versions
+/tools                 List the tools available now
+/skills                List available instructions
 /status [RUN]          Inspect current or selected run
 /approve [RUN] CALL     Record approval of the exact call
 /deny [RUN] CALL        Reject a pending call
@@ -75,6 +78,21 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
                     break
                 if command == '/help':
                     say(HELP); continue
+                if command == '/version':
+                    from . import __version__
+                    from importlib.metadata import version, PackageNotFoundError
+                    try: installed = version('bishop-runtime')
+                    except PackageNotFoundError: installed = __version__
+                    say(f'Bishop runtime {__version__} · installed package {installed}')
+                    if installed != __version__: say('Restart Bishop to load the installed update.')
+                    continue
+                if command == '/tools':
+                    say('Available tools: ' + ', '.join(tool['function']['name'] for tool in runtime.tools.definitions()))
+                    continue
+                if command == '/skills':
+                    from .skills import SkillStore
+                    say('Available skills: ' + ', '.join(item['name'] for item in SkillStore(home / 'skills', create=False).list()))
+                    continue
                 if command == '/new':
                     if len(parts) != 2:
                         raise ValueError('Usage: /new SESSION')

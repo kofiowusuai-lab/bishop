@@ -11,6 +11,8 @@ DEFAULTS = {
     'max_steps': 12, 'history_turns': 8, 'allow_write': True, 'allow_command': False,
     'telegram': {'token_env': 'BISHOP_TELEGRAM_TOKEN', 'allowed_users': []},
     'audit': {'hub_url': '', 'token_env': 'BISHOP_AUDIT_TOKEN'},
+    'web': {'enabled': True, 'provider': 'duckduckgo', 'api_key_env': 'BISHOP_BRAVE_SEARCH_API_KEY',
+            'timeout': 12, 'max_results': 5, 'page_chars': 12000},
     'monitoring': {'enabled': True, 'terminal': True, 'telegram': True, 'discord': False, 'whatsapp': False,
                    'heartbeat_seconds': 10, 'discord_webhook_env': 'BISHOP_DISCORD_WEBHOOK_URL',
                    'whatsapp_bridge_env': 'BISHOP_WHATSAPP_BRIDGE_URL', 'whatsapp_chat_env': 'BISHOP_WHATSAPP_CHAT_ID'},
@@ -27,6 +29,17 @@ def validate_monitoring(settings):
         value = settings[name]
         if not isinstance(value, str) or not value.isidentifier() or len(value) > 128:
             raise ValueError('invalid monitoring environment reference')
+
+
+def validate_web(settings):
+    if type(settings['enabled']) is not bool or settings['provider'] not in ('duckduckgo','brave'):
+        raise ValueError('invalid web research settings')
+    for name,low,high in [('timeout',1,30),('max_results',1,10),('page_chars',1000,32000)]:
+        if type(settings[name]) is not int or not low <= settings[name] <= high:
+            raise ValueError('invalid web research limits')
+    name=settings['api_key_env']
+    if not isinstance(name,str) or not name.isidentifier() or len(name)>128:
+        raise ValueError('invalid search credential environment reference')
 
 
 def init_home(home):
@@ -82,6 +95,7 @@ def load_config(home):
         if any(not isinstance(config[section][name], str) for name in names):
             raise ValueError('configuration text field is invalid')
     validate_monitoring(config['monitoring'])
+    validate_web(config['web'])
     # Validate transport even when no model is selected; no network is performed.
     HTTPProvider(config['provider']['base_url'], config['provider']['model'] or 'configuration-check',
                  timeout=config['provider']['timeout'], max_tokens=config['provider']['max_tokens'])

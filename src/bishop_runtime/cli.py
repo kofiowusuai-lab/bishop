@@ -21,7 +21,8 @@ def _runtime(home, config, provider=None, remote_progress=True):
     selected_provider = provider if provider is not None else provider_from_config(config, home=home)
     memory = MemoryStore(home / 'memory.db')
     tools = ToolRegistry(home / 'workspace', memory, home / 'skills',
-                         allow_write=config['allow_write'], allow_command=config['allow_command'])
+                         allow_write=config['allow_write'], allow_command=config['allow_command'],
+                         allow_web=config['web']['enabled'], web_settings=config['web'])
     runtime = Runtime(home, selected_provider, tools,
                       max_steps=config['max_steps'], history_turns=config['history_turns'],
                       progress=None if config['monitoring']['enabled'] else False,
@@ -104,6 +105,12 @@ def parser():
     subs = q.add_subparsers(dest='skills_command')
     subs.add_parser('list')
     q = subs.add_parser('show'); q.add_argument('name')
+    q = commands.add_parser('web', help='configure or diagnose independent public web research')
+    subs = q.add_subparsers(dest='web_command')
+    subs.add_parser('status')
+    subs.add_parser('configure')
+    q = subs.add_parser('search'); q.add_argument('query', nargs='+')
+    q = subs.add_parser('read'); q.add_argument('url')
     q = commands.add_parser('monitor', aliases=['monitoring'], help='inspect or configure default task monitoring')
     subs = q.add_subparsers(dest='monitor_command')
     subs.add_parser('status')
@@ -179,7 +186,8 @@ def _boot(home, config, session='local'):
     from .terminal import print_boot
     profile = ProfileStore(home).active()
     tools = ToolRegistry(home / 'workspace', None, home / 'skills',
-                         allow_write=config['allow_write'], allow_command=config['allow_command'])
+                         allow_write=config['allow_write'], allow_command=config['allow_command'],
+                         allow_web=config['web']['enabled'], web_settings=config['web'])
     print_boot({'version': __version__, 'profile': profile['name'] if profile else 'not configured',
                 'provider': profile['kind'] if profile else 'local compatible',
                 'model': profile['model'] if profile else (os.environ.get('BISHOP_MODEL') or config['provider']['model'] or 'choose with bishop setup'),
@@ -195,6 +203,11 @@ def main(argv=None):
     try:
         if args.no_color:
             os.environ['NO_COLOR'] = '1'
+        if args.command == 'web':
+            from .web_commands import execute
+            value, code = execute(home, args)
+            _emit(value)
+            return code
         if args.command in ('monitor', 'monitoring'):
             from .monitor_commands import execute
             _emit(execute(home, args))

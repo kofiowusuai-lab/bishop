@@ -6,7 +6,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.4.0 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.5.0 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -50,6 +50,19 @@ bishop auth logout
 You can also choose **Continue with ChatGPT** in setup. Bishop registers its own OAuth client and keeps its own tokens; its independent runtime calls the public Responses API directly. It does not run Codex or reuse Hermes credentials. Login eligibility, available models and plan limits come from OpenAI. The adapter preserves reasoning continuation across tool approvals and restarts. [OAuth details and official sources](docs/chatgpt-oauth.md).
 
 Authentication is tested with simulated browser callbacks and signed test tokens. Real account login and live model inference require your own acceptance check. Setup never makes a test inference request. API-key providers can charge for tasks you submit.
+
+## Independent internet research
+
+Bishop ships with `web_search`, `web_read` and a bundled `web-research` skill. Web research is enabled by default: ask a question and the agent can search, open public sources and cite the evidence. Default DuckDuckGo Lite needs no extra key; an explicitly configured Brave Search API provider is available when you need an API-backed search service.
+
+```sh
+bishop web status
+bishop web search Nous Research Hermes agent
+bishop web read https://hermes-agent.nousresearch.com/
+bishop web configure
+```
+
+Inside chat, `/tools`, `/skills` and `/version` show the actual running capabilities. Restart Bishop after an update. Public search can challenge or rate-limit requests; errors are reported honestly and the agent can try another source. [Providers, limits and verification](docs/web-research.md).
 
 ## Live task monitoring included
 

@@ -20,6 +20,7 @@ Bishop is an independent runtime. A similar command name does not imply Hermes f
 | `bishop tools`, `bishop tools list` | List enabled built-in tools and their risk classifications. |
 | `bishop skills`, `bishop skills list` | List owner-installed skill instructions. |
 | `bishop skills show NAME` | Read bounded skill instructions; never execute skill scripts. |
+| `bishop web status/configure/search/read` | Inspect/configure research or search/read public sources without an LLM request. |
 | `bishop monitor` / `bishop monitoring` | Inspect default task monitoring, history, destinations and delivery recovery. |
 | `bishop monitor configure` | Enable/disable native monitoring or individual destinations through choices. |
 | `bishop sessions` | List persisted sessions. |

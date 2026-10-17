@@ -6,7 +6,7 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .config import DEFAULTS, validate_monitoring
+from .config import DEFAULTS, validate_monitoring, validate_web
 from .provider import validate_provider_settings
 from .terminal import safe_text, _ESCAPE
 
@@ -48,6 +48,7 @@ def _configuration(home):
         validate_provider_settings(provider['base_url'], provider['model'] or 'configuration-check',
                                    provider['timeout'], provider['max_tokens'])
         validate_monitoring(config['monitoring'])
+        validate_web(config['web'])
         if not isinstance(config['audit']['hub_url'], str):
             raise ValueError()
     except (ValueError, TypeError, UnicodeError, OSError, OverflowError):
@@ -103,7 +104,8 @@ def _tools(config):
     return [{'name': name, 'risk': risk, 'idempotent': idempotent}
             for name, (_, _, risk, idempotent) in _SCHEMAS.items()
             if not (risk == 'write' and not config['allow_write'])
-            and not (risk == 'command' and not config['allow_command'])]
+            and not (risk == 'command' and not config['allow_command'])
+            and not (name in ('web_search','web_read') and not config['web']['enabled'])]
 
 
 def report(home, command, skill_name=None):
@@ -157,4 +159,4 @@ def report(home, command, skill_name=None):
                          'api_key_env': provider['api_key_env'], 'timeout': provider['timeout'], 'max_tokens': provider['max_tokens']},
             'profile': profile, 'telegram': {'token_env': config['telegram']['token_env'], 'allowed_user_count': len(config['telegram']['allowed_users'])},
             'audit': {'endpoint_origin': _origin(config['audit']['hub_url']), 'token_env': config['audit']['token_env']},
-            'monitoring': config['monitoring'], 'network': network}, 0
+            'monitoring': config['monitoring'], 'web': config['web'], 'network': network}, 0

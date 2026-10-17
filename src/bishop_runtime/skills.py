@@ -6,9 +6,9 @@ from importlib.resources import files
 
 
 def bundled_skill(name):
-    if name != 'task-monitor':
+    if name not in ('task-monitor','web-research'):
         return None
-    return files('bishop_runtime').joinpath('builtin_skills', 'task-monitor', 'SKILL.md')
+    return files('bishop_runtime').joinpath('builtin_skills', name, 'SKILL.md')
 
 
 class SkillStore:
@@ -39,8 +39,9 @@ class SkillStore:
                 continue
             if len(result)>=200:
                 break
-        if not any(item['name'] == 'task-monitor' for item in result):
-            result.append({'name': 'task-monitor', 'source': 'bundled'})
+        for name in ('task-monitor','web-research'):
+            if not any(item['name'] == name for item in result):
+                result.append({'name': name, 'source': 'bundled'})
         return sorted(result, key=lambda item: item['name'])
 
     def read(self,name,max_chars):
