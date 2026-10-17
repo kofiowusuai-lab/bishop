@@ -1,0 +1,9 @@
+# Bishop identity redesign
+
+The user rejected the coarse bead silhouette, block title and empty screen-width rectangle. Keep the original request's black/warm-gold terminal dot-matrix direction, but make Bishop distinctive and refined. No copied Hermes mark.
+
+Create an original faceted chess bishop with a precise diagonal mitre cut, waisted stem and architectural plinth. Fine Unicode braille dots provide sub-character resolution and restrained simulated metal lighting. A matching native SVG should preserve the geometry as an exportable logo. Palette: parchment highlight #F4DCA6, champagne #DAB879, antique gold #B68A4D, bronze #76512E, warm ivory #E7E0D1, graphite #77736B. Do not force a black terminal background; no full-screen clears/animations or dependency on terminal graphics protocols.
+
+Use a compact layout with a maximum content width around100 columns, art on left and wordmark/status on right at wide sizes, stacked/compact at narrow sizes. Remove the outer screen-width box and sales tagline. Typography: a custom terminal-native geometric outline wordmark, quiet monospaced labels and bright model value. Display useful identity/configuration, grouped capabilities, home/session and commands with intentional whitespace. No ornamental fake status indicators or invented measurements.
+
+Retain metadata sanitization, NO_COLOR, non-TTY, width bounds and API compatibility. Keep every tool/skill name visible for reasonable inventories. Provide scalable brand asset with Bishop/Kedolabs attribution, SVG title/description and descriptive SEO filename; no extra AI credits. Verify visual outputs at80/100/200 widths using rendered standalone preview artifacts and terminal PTY, not only string tests. User instructions authorize routine design changes and publishing as continuation of shipped Bishop.
