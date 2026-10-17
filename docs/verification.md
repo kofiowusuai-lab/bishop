@@ -41,3 +41,11 @@ Independent review identified incomplete profile validation and malformed URL ha
 ## Bishop 0.3.2 missing-key preflight
 
 168 tests pass locally. An OpenCode Go profile without a configured credential now fails before live adapter construction, with private setup guidance. Doctor warns about the missing key. Regression coverage spans known paid presets, saved keys, keyless local/free/custom routes and sanitized doctor output. Independent review confirmed exact route matching does not widen credential routing. Secret scan passes. The reported user's active Go profile was inspected through credential-presence metadata only; no keys were imported and no paid inference request was made. Successful real inference still requires the user to enter their key.
+
+## Bishop 0.4.0 bundled task monitoring
+
+209 tests pass locally and against the final wheel in a fresh virtual environment outside the source checkout, with ResourceWarning promoted to errors. The installed wheel contains `builtin_skills/task-monitor/SKILL.md`; skill inspection works without creating a home. An actual PTY verified live model-wait, elapsed heartbeat and completion output.
+
+Tests cover real runtime lifecycle/audit ordering, approval/resume card reuse, blocked-provider live notification, scoped Telegram delivery, secret exclusion, uncertain creation/restart/adoption, coalesced edits, Discord mention suppression, WhatsApp bridge payload/rollover, readonly monitor commands, config opt-out, owner skill precedence and stdout JSON/stderr progress separation. Telegram edit retries accept the bounded already-current response. A corrupt optional journal warns without preventing the task.
+
+Independent review found and verified fixes for premature completion on audit resume, unbounded observer unsubscribe, journal retention and an admin delivery-recovery race. Package builds, secret scan and whitespace checks pass. Discord and WhatsApp are outbound progress adapters requiring explicit configuration; full inbound gateways are not included. Real remote messages and paid inference were not sent during this verification. Final answers retain the existing durable channel delivery path.

@@ -14,7 +14,7 @@ def _emit(value):
     print(json.dumps(value, indent=2, ensure_ascii=False))
 
 
-def _runtime(home, config, provider=None):
+def _runtime(home, config, provider=None, remote_progress=True):
     from .memory import MemoryStore
     from .runtime import Runtime
     from .tools import ToolRegistry
@@ -23,13 +23,18 @@ def _runtime(home, config, provider=None):
     tools = ToolRegistry(home / 'workspace', memory, home / 'skills',
                          allow_write=config['allow_write'], allow_command=config['allow_command'])
     runtime = Runtime(home, selected_provider, tools,
-                      max_steps=config['max_steps'], history_turns=config['history_turns'])
+                      max_steps=config['max_steps'], history_turns=config['history_turns'],
+                      progress=None if config['monitoring']['enabled'] else False,
+                      progress_heartbeat_interval=config['monitoring']['heartbeat_seconds'])
+    if remote_progress:
+        from .monitor_integration import configure_remote
+        configure_remote(runtime, home, config)
     return runtime, memory
 
 
 def _offline_runtime(home, config):
     # Read/admin commands must never require live credentials or invoke the model.
-    return _runtime(home, config, ScriptedProvider([]))
+    return _runtime(home, config, ScriptedProvider([]), remote_progress=False)
 
 
 def demo(home=None):
@@ -47,7 +52,7 @@ def demo(home=None):
         {'content': 'Saved bishop-note.txt after operator approval.', 'tool_calls': []},
     ])
     config = load_config(home)
-    runtime, memory = _runtime(home, config, provider)
+    runtime, memory = _runtime(home, config, provider, remote_progress=False)
     try:
         run = runtime.run('offline-demo', 'Read the brief and save a note about Bishop.')
         if run['status'] != 'awaiting_approval' or (home / 'workspace' / 'bishop-note.txt').exists():
@@ -99,6 +104,21 @@ def parser():
     subs = q.add_subparsers(dest='skills_command')
     subs.add_parser('list')
     q = subs.add_parser('show'); q.add_argument('name')
+    q = commands.add_parser('monitor', aliases=['monitoring'], help='inspect or configure default task monitoring')
+    subs = q.add_subparsers(dest='monitor_command')
+    subs.add_parser('status')
+    subs.add_parser('configure')
+    subs.add_parser('deliveries')
+    for operation in ('runs', 'events'):
+        sub = subs.add_parser(operation)
+        if operation == 'events': sub.add_argument('run')
+        sub.add_argument('--limit', type=int, default=100)
+    sub = subs.add_parser('resolve', help='explicitly reconcile an uncertain progress card')
+    sub.add_argument('run')
+    sub.add_argument('--channel', choices=('telegram','discord','whatsapp'), required=True)
+    sub.add_argument('--destination', required=True, help='destination hash from monitor deliveries')
+    sub.add_argument('--action', choices=('sent','retry'), required=True)
+    sub.add_argument('--message-id')
     commands.add_parser('preview', help='show the Bishop startup screen without model calls')
     profiles = commands.add_parser('providers', help='manage multiple saved providers and keys')
     profile_commands = profiles.add_subparsers(dest='profile_command', required=True)
@@ -175,6 +195,10 @@ def main(argv=None):
     try:
         if args.no_color:
             os.environ['NO_COLOR'] = '1'
+        if args.command in ('monitor', 'monitoring'):
+            from .monitor_commands import execute
+            _emit(execute(home, args))
+            return 0
         if args.command in ('doctor', 'config', 'tools', 'skills') or (args.command == 'status' and args.run is None):
             from .operator import report
             value, code = report(home, args.command, getattr(args, 'name', None) if args.command == 'skills' else None)
@@ -248,7 +272,10 @@ def main(argv=None):
         runtime, memory = _runtime(home, config) if live else _offline_runtime(home, config)
         if args.command == 'chat':
             if args.text is not None:
-                _emit(runtime.run(args.session, args.text, actor=args.actor))
+                from .monitor_integration import terminal_watch
+                with terminal_watch(runtime, config, sys.stderr, args.actor, args.session):
+                    result = runtime.run(args.session, args.text, actor=args.actor)
+                _emit(result)
             else:
                 from .shell import run_chat
                 _boot(home, config, session=args.session)
@@ -260,7 +287,10 @@ def main(argv=None):
         elif args.command in ('approve', 'deny'):
             _emit(getattr(runtime, args.command)(args.run, args.call, actor=args.actor))
         elif args.command == 'resume':
-            _emit(runtime.resume(args.run, actor=args.actor))
+            from .monitor_integration import terminal_watch
+            with terminal_watch(runtime, config, sys.stderr, args.actor):
+                result = runtime.resume(args.run, actor=args.actor)
+            _emit(result)
         elif args.command == 'reconcile':
             _emit(runtime.reconcile(args.run, args.call, _read_bounded(args.result_file), actor=args.actor))
         elif args.command in ('audit', 'sync', 'review'):
@@ -291,7 +321,8 @@ def main(argv=None):
             if not token and not (args.deliveries or args.resolve):
                 raise ValueError('configure Bishop Telegram token environment variable')
             client = TelegramClient(token or 'offline-admin')
-            service = TelegramService(home, client, runtime, config['telegram']['allowed_users'])
+            service = TelegramService(home, client, runtime, config['telegram']['allowed_users'],
+                                      progress_enabled=config['monitoring']['telegram'])
             if args.deliveries:
                 _emit(service.deliveries())
             elif args.resolve:

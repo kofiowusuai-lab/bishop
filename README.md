@@ -6,7 +6,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.3.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.4.0 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -50,6 +50,20 @@ bishop auth logout
 You can also choose **Continue with ChatGPT** in setup. Bishop registers its own OAuth client and keeps its own tokens; its independent runtime calls the public Responses API directly. It does not run Codex or reuse Hermes credentials. Login eligibility, available models and plan limits come from OpenAI. The adapter preserves reasoning continuation across tool approvals and restarts. [OAuth details and official sources](docs/chatgpt-oauth.md).
 
 Authentication is tested with simulated browser callbacks and signed test tokens. Real account login and live model inference require your own acceptance check. Setup never makes a test inference request. API-key providers can charge for tasks you submit.
+
+## Live task monitoring included
+
+Task monitoring is enabled by default and the `task-monitor` skill ships in the package. Terminal chat reports real model/tool activity, approval waits and elapsed-time heartbeats. Telegram updates one progress card in the originating allowlisted chat. Final completion follows the durable response/audit checkpoint; monitoring never retries model calls or tools.
+
+```sh
+bishop monitor status
+bishop monitor runs
+bishop monitor events RUN_ID
+bishop monitor configure
+bishop skills show task-monitor
+```
+
+Discord webhook and compatible WhatsApp bridge progress are optional outbound destinations with explicit Bishop environment references. They are separate from full inbound chat gateways. No Hermes/OpenClaw credentials are imported. [Configuration, privacy and delivery recovery](docs/task-monitor.md).
 
 ## Try it without credentials
 

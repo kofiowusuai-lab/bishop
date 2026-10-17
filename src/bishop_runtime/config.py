@@ -11,7 +11,22 @@ DEFAULTS = {
     'max_steps': 12, 'history_turns': 8, 'allow_write': True, 'allow_command': False,
     'telegram': {'token_env': 'BISHOP_TELEGRAM_TOKEN', 'allowed_users': []},
     'audit': {'hub_url': '', 'token_env': 'BISHOP_AUDIT_TOKEN'},
+    'monitoring': {'enabled': True, 'terminal': True, 'telegram': True, 'discord': False, 'whatsapp': False,
+                   'heartbeat_seconds': 10, 'discord_webhook_env': 'BISHOP_DISCORD_WEBHOOK_URL',
+                   'whatsapp_bridge_env': 'BISHOP_WHATSAPP_BRIDGE_URL', 'whatsapp_chat_env': 'BISHOP_WHATSAPP_CHAT_ID'},
 }
+
+
+def validate_monitoring(settings):
+    for name in ('enabled', 'terminal', 'telegram', 'discord', 'whatsapp'):
+        if type(settings[name]) is not bool:
+            raise ValueError('monitoring flags must be booleans')
+    if type(settings['heartbeat_seconds']) is not int or not 1 <= settings['heartbeat_seconds'] <= 300:
+        raise ValueError('monitor heartbeat must be between 1 and 300 seconds')
+    for name in ('discord_webhook_env', 'whatsapp_bridge_env', 'whatsapp_chat_env'):
+        value = settings[name]
+        if not isinstance(value, str) or not value.isidentifier() or len(value) > 128:
+            raise ValueError('invalid monitoring environment reference')
 
 
 def init_home(home):
@@ -66,6 +81,7 @@ def load_config(home):
     for section, names in [('provider', ('base_url', 'model')), ('audit', ('hub_url',))]:
         if any(not isinstance(config[section][name], str) for name in names):
             raise ValueError('configuration text field is invalid')
+    validate_monitoring(config['monitoring'])
     # Validate transport even when no model is selected; no network is performed.
     HTTPProvider(config['provider']['base_url'], config['provider']['model'] or 'configuration-check',
                  timeout=config['provider']['timeout'], max_tokens=config['provider']['max_tokens'])

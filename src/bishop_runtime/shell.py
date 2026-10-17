@@ -19,6 +19,10 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
     menu_input = input_fn
     input_fn = input_fn or input
     output = output or sys.stdout
+    def execute(action):
+        from .monitor_integration import terminal_watch
+        with terminal_watch(runtime, config, output, actor=actor):
+            return action()
     def say(text):
         print('\n'.join(safe_text(line) for line in str(text).split('\n')), file=output)
     def present(run):
@@ -48,7 +52,7 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
             action = runtime.approve if answer in ('y', 'yes') else runtime.deny
             action(run['id'], call['id'], actor=actor)
             say('Continuing…')
-            run = runtime.resume(run['id'], actor=actor)
+            run = execute(lambda: runtime.resume(run['id'], actor=actor))
         present(run)
         return run
 
@@ -111,10 +115,10 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
                         raise ValueError('run belongs to another actor')
                     present(last)
                 else:
-                    last = settle(runtime.resume(run_id, actor=actor))
+                    last = settle(execute(lambda: runtime.resume(run_id, actor=actor)))
             else:
                 say('Bishop is working…')
-                last = settle(runtime.run(session, text, actor=actor))
+                last = settle(execute(lambda: runtime.run(session, text, actor=actor)))
         except (ValueError, RuntimeError) as exc:
             say('Bishop: ' + str(exc))
     say('Bishop stopped. Your conversation and checkpoints are saved.')

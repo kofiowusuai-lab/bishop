@@ -1,5 +1,7 @@
 """Optional, independently operated Telegram long-poll channel."""
 import json
+from contextlib import contextmanager
+from pathlib import Path
 import math
 import time
 import urllib.error
@@ -20,16 +22,27 @@ class TelegramClient:
         if not isinstance(timeout,(int,float)) or not math.isfinite(timeout) or not 0<timeout<=120: raise ValueError('Invalid Telegram timeout')
         self.url=base_url.rstrip('/')+'/bot'+token+'/'; self.timeout=timeout
         self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),_NoRedirect())
-    def _call(self,method,payload):
+    def _call(self,method,payload,timeout=None):
         req=urllib.request.Request(self.url+method,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'},method='POST')
         try:
-            with self.opener.open(req,timeout=self.timeout) as response: raw=response.read(2_000_001)
+            with self.opener.open(req,timeout=self.timeout if timeout is None else timeout) as response: raw=response.read(2_000_001)
             if len(raw)>2_000_000: raise TelegramError('Telegram response too large')
             data=json.loads(raw)
             if not isinstance(data,dict) or data.get('ok') is not True: raise TelegramError('Telegram API rejected request')
             return data.get('result')
         except urllib.error.HTTPError as exc:
-            exc.close()
+            try:
+                if method=='editMessageText' and exc.code==400:
+                    raw=exc.read(4097)
+                    if len(raw)<=4096:
+                        data=json.loads(raw)
+                        description=data.get('description') if isinstance(data,dict) else None
+                        if isinstance(description,str) and description.startswith('Bad Request: message is not modified'):
+                            return {'message_id':payload['message_id']}
+            except (ValueError,OSError,KeyError):
+                pass
+            finally:
+                exc.close()
             raise TelegramError('Telegram HTTP request rejected') from None
         except TelegramError: raise
         except Exception: raise TelegramError('Telegram transport or response failure') from None
@@ -37,10 +50,18 @@ class TelegramClient:
         result=self._call('getUpdates',{'offset':offset,'timeout':min(max(timeout,0),25),'limit':100,'allowed_updates':['message']})
         if not isinstance(result,list) or len(result)>100: raise TelegramError('Invalid Telegram updates')
         return result
-    def send_message(self,chat_id,text):
+    def send_message(self,chat_id,text,timeout=None):
         if not isinstance(text,str) or not text or len(text.encode('utf-16-le'))//2>4096: raise ValueError('Telegram text exceeds message limit')
-        result=self._call('sendMessage',{'chat_id':chat_id,'text':text})
+        result=self._call('sendMessage',{'chat_id':chat_id,'text':text},timeout=timeout)
         if not isinstance(result,dict) or type(result.get('message_id')) is not int: raise TelegramError('Invalid Telegram send response')
+        return result
+
+    def edit_message(self,chat_id,message_id,text,timeout=None):
+        if type(message_id) is not int or not isinstance(text,str) or not text or len(text.encode('utf-16-le'))//2>4096:
+            raise ValueError('Invalid Telegram progress edit')
+        result=self._call('editMessageText',{'chat_id':chat_id,'message_id':message_id,'text':text},timeout=timeout)
+        if result is not True and (not isinstance(result,dict) or result.get('message_id')!=message_id):
+            raise TelegramError('Invalid Telegram edit response')
         return result
 
 def _chunks(text):
@@ -58,11 +79,36 @@ def _render(run):
     return result
 
 class TelegramService:
-    def __init__(self,home,client,runtime,allowed_users):
+    def __init__(self,home,client,runtime,allowed_users,progress_enabled=True):
         if not allowed_users or any(type(u) is not int or u<=0 for u in allowed_users): raise ValueError('Positive numeric Telegram allowlist required')
         self.client=client; self.runtime=runtime; self.allowed=set(allowed_users)
+        self.home=Path(home); self.progress_enabled=progress_enabled; self._progress_cards={}; self._monitoring_active=True
         try: self.state=ChannelState(home)
         except ValueError as exc: raise TelegramError(str(exc)) from None
+    @contextmanager
+    def _watch(self,p):
+        monitor=getattr(self.runtime,'progress',None)
+        if monitor is None or not self.progress_enabled:
+            yield
+            return
+        from .progress_transports import ProgressCards
+        key=(p['user'],p['chat'])
+        if key not in self._progress_cards:
+            def send(text):
+                if isinstance(self.client,TelegramClient):
+                    return self.client.send_message(p['chat'],text,timeout=5)['message_id']
+                return self.client.send_message(p['chat'],text)['message_id']
+            def edit(message,text):
+                if isinstance(self.client,TelegramClient):
+                    return self.client.edit_message(p['chat'],message,text,timeout=5)
+                return self.client.edit_message(p['chat'],message,text)
+            cards=ProgressCards(self.home,send,edit,'telegram',str(p['chat']),
+                                authorized=lambda:self._monitoring_active and p['user'] in self.allowed)
+            self._progress_cards[key]=cards
+            monitor.add_cleanup(cards.close)
+        with monitor.subscribe(self._progress_cards[key],actor=f"telegram:{p['user']}",session_id=f"telegram:{p['chat']}"):
+            yield
+
     def _authorize(self,u):
         m=u.get('message')
         if not isinstance(m,dict): return None
@@ -87,13 +133,18 @@ class TelegramService:
                 if len(parts)!=(2 if command=='/resume' else 3): return 'Usage: '+command+' RUN'+(' CALL' if command!='/resume' else '')
                 run=self.runtime.status(parts[1])
                 if run['actor']!=actor: return 'Run is not owned by this Telegram user.'
-                if command=='/resume': return _render(self.runtime.resume(parts[1],actor=actor))
+                if command=='/resume':
+                    with self._watch(p):
+                        result=self.runtime.resume(parts[1],actor=actor)
+                    return _render(result)
                 run=getattr(self.runtime,command[1:])(parts[1],parts[2],actor=actor)
                 return _render(run)+'\nUse /resume '+run['id']+' to continue.'
             return 'Unknown command.'
         active=self.runtime.active(session,actor=actor)
         if active: return 'An active run needs attention. '+_render(active)
-        return _render(self.runtime.run(session,text,actor=actor))
+        with self._watch(p):
+            result=self.runtime.run(session,text,actor=actor)
+        return _render(result)
     def poll_once(self):
         self.state.renew()
         updates=self.client.get_updates(self.state.offset(),timeout=25)
@@ -132,4 +183,6 @@ class TelegramService:
                 failures+=1
                 if failures>=3: raise TelegramError('Telegram polling stopped after three transport failures') from None
                 time.sleep(2**failures)
-    def close(self): self.state.close()
+    def close(self):
+        self._monitoring_active=False
+        self.state.close()

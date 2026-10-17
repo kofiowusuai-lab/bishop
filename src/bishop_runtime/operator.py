@@ -6,7 +6,7 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .config import DEFAULTS
+from .config import DEFAULTS, validate_monitoring
 from .provider import validate_provider_settings
 from .terminal import safe_text, _ESCAPE
 
@@ -47,6 +47,7 @@ def _configuration(home):
             raise ValueError()
         validate_provider_settings(provider['base_url'], provider['model'] or 'configuration-check',
                                    provider['timeout'], provider['max_tokens'])
+        validate_monitoring(config['monitoring'])
         if not isinstance(config['audit']['hub_url'], str):
             raise ValueError()
     except (ValueError, TypeError, UnicodeError, OSError, OverflowError):
@@ -93,10 +94,8 @@ def _skills(home):
     directory = home / 'skills'
     if directory.is_symlink():
         raise ValueError('skill directory cannot be a symlink')
-    if not directory.is_dir():
-        return []
     from .skills import SkillStore
-    return SkillStore(directory).list()
+    return SkillStore(directory, create=False).list()
 
 
 def _tools(config):
@@ -140,10 +139,8 @@ def report(home, command, skill_name=None):
                 raise ValueError('invalid skill name')
             if (home / 'skills').is_symlink():
                 raise ValueError('skill directory cannot be a symlink')
-            if not (home / 'skills').is_dir():
-                raise ValueError('skill unavailable')
             from .skills import SkillStore
-            value = SkillStore(home / 'skills').read(skill_name, 16000)
+            value = SkillStore(home / 'skills', create=False).read(skill_name, 16000)
             value['content'] = ''.join(c for c in _ESCAPE.sub('', value['content'])
                                        if c in '\n\t' or unicodedata.category(c) not in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp'))
             return value, 0
@@ -160,4 +157,4 @@ def report(home, command, skill_name=None):
                          'api_key_env': provider['api_key_env'], 'timeout': provider['timeout'], 'max_tokens': provider['max_tokens']},
             'profile': profile, 'telegram': {'token_env': config['telegram']['token_env'], 'allowed_user_count': len(config['telegram']['allowed_users'])},
             'audit': {'endpoint_origin': _origin(config['audit']['hub_url']), 'token_env': config['audit']['token_env']},
-            'network': network}, 0
+            'monitoring': config['monitoring'], 'network': network}, 0

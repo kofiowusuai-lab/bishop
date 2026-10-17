@@ -20,6 +20,8 @@ Bishop is an independent runtime. A similar command name does not imply Hermes f
 | `bishop tools`, `bishop tools list` | List enabled built-in tools and their risk classifications. |
 | `bishop skills`, `bishop skills list` | List owner-installed skill instructions. |
 | `bishop skills show NAME` | Read bounded skill instructions; never execute skill scripts. |
+| `bishop monitor` / `bishop monitoring` | Inspect default task monitoring, history, destinations and delivery recovery. |
+| `bishop monitor configure` | Enable/disable native monitoring or individual destinations through choices. |
 | `bishop sessions` | List persisted sessions. |
 | `bishop approve RUN CALL`, `bishop deny RUN CALL` | Record an operator decision for an exact tool call. |
 | `bishop resume RUN` | Continue a run; this is not a system-wide emergency resume. |
@@ -64,7 +66,7 @@ The following are a capability map, not executable Bishop commands.
 | external `memory`, `journey` | Partial: actor-scoped local memory tools exist. External providers and a learning timeline are planned. |
 | `pets`, `skin` | Partial: Bishop has its own boot identity. Mascot browsing and theme management are planned. |
 | advanced `sessions` operations | Partial: list exists; browse/rename/export/prune/delete need explicit interfaces. |
-| `insights`, `monitoring`, `logs` | Partial: persisted run status and audit inspection exist. Usage analytics and live task-monitor integration are separate work. |
+| `insights`, `monitoring`, `logs` | Partial: native task monitoring, lifecycle history and delivery recovery are implemented through `monitor`. Usage analytics and general diagnostic logs remain to build. |
 | `verify`, `security`, `approvals` proposals | Partial: runtime verifies persistence/audit checkpoints. Project smoke tests, vulnerability scanning and approval proposals are planned. |
 | `dump`, `debug`, `prompt-size` | Planned: sanitized support bundles and prompt accounting. |
 | `backup`, `import`, `checkpoints` | Planned: portable backup/restore and filesystem checkpoint management. Current run persistence is not a backup system. |
@@ -78,7 +80,7 @@ Future command families should ship with real implementations, persistence rules
 
 ## Implementation order for the remaining systems
 
-1. Default runtime task monitoring: durable lifecycle events, terminal progress, edited Telegram cards, and separately configured Discord/WhatsApp progress transports. Outbound progress does not imply a full inbound chat gateway.
+1. Default runtime task monitoring is implemented: durable lifecycle events, terminal progress, edited Telegram cards and explicitly configured Discord/WhatsApp progress transports. Outbound progress does not imply a full inbound chat gateway.
 2. Messaging gateway lifecycle: common channel interface, routing, pairing/revocation and durable delivery recovery, then Discord and WhatsApp inbound adapters.
 3. Operations: emergency pause, scheduled jobs, authenticated webhooks and named projects, with explicit crash-recovery and authorization policies.
 4. Extensions: trusted skill installation, MCP, plugin boundaries and computer tools.

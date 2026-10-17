@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bishop-runtime"
-version = "0.3.2"
+version = "0.4.0"
 description = "An independent, durable personal agent runtime with explicit tool approvals and audit trails"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,3 +18,6 @@ bishop = "bishop_runtime.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+bishop_runtime = ["builtin_skills/*/SKILL.md"]
