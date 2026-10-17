@@ -1,4 +1,5 @@
 import io
+import re
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -99,7 +100,8 @@ class ProgressTransportTests(unittest.TestCase):
             def isatty(self):return True
         output=TTY();sink=TerminalProgress(output)
         import os
-        with patch('bishop_runtime.progress_transports.shutil.get_terminal_size',return_value=os.terminal_size((30,20))):sink(self.snapshot())
-        self.assertLessEqual(len(output.getvalue().removeprefix('\r\x1b[2K')),29)
+        with patch.dict('os.environ',{},clear=True), patch('bishop_runtime.progress_transports.shutil.get_terminal_size',return_value=os.terminal_size((30,20))):sink(self.snapshot())
+        visible = re.sub(r'\x1b\[[0-9;]*m', '', output.getvalue()).removeprefix('\r\x1b[2K')
+        self.assertLessEqual(len(visible),29)
         sink.close();self.assertTrue(output.getvalue().endswith('\n'))
         self.assertIn('Interrupted',render_progress(dict(run_id='abc',status='interrupted',phase='interrupted')))
