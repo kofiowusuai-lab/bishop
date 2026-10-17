@@ -7,9 +7,9 @@ Bishop is an independent runtime. A similar command name does not imply Hermes f
 | Command | Behavior |
 | --- | --- |
 | `bishop`, `bishop chat` | Interactive conversation; `chat TEXT` sends one turn. |
-| `bishop model` | Choose a saved provider and keep or change its model through searchable menus. |
+| `bishop model` | Open the active provider model catalog directly; choose a model through searchable menus. |
 | `bishop setup` | Add a provider/key using the setup wizard and live model catalog. |
-| `bishop providers list/add/use/remove` | Manage saved provider configurations; these share the current runtime home. |
+| `bishop providers list/add/select/use/remove` | Manage saved provider configurations; these share the current runtime home. |
 | `bishop login`, `bishop auth login` | Bishop-owned ChatGPT OAuth and account model selection. API keys use setup. |
 | `bishop logout`, `bishop auth logout` | Clear Bishop-owned ChatGPT authentication. Saved API keys are separate. |
 | `bishop auth status` | Inspect ChatGPT authentication without printing tokens. |

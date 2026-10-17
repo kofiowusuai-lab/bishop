@@ -163,3 +163,44 @@ class OnboardingTests(unittest.TestCase):
                     result=setup(Path(root),input_fn=lambda prompt:next(answers),output=io.StringIO())
                 self.assertEqual(result['model'],'listed')
                 self.assertEqual(result['kind'],kind)
+
+
+class DirectModelPickerTests(unittest.TestCase):
+    def test_active_profile_opens_catalog_without_provider_menu(self):
+        from bishop_runtime.onboarding import select_model
+        with tempfile.TemporaryDirectory() as root:
+            store = ProfileStore(root)
+            store.save('work', 'compatible', 'https://openrouter.ai/api/v1', 'old', api_key='synthetic-key', preset_id='openrouter')
+            output = io.StringIO(); prompts = []
+            def answer(prompt):
+                prompts.append(prompt)
+                return 'new'
+            models = [{'id': 'new', 'label': 'New', 'kind': 'compatible', 'base_url': 'https://openrouter.ai/api/v1'}]
+            with patch('bishop_runtime.onboarding.discover_models', return_value=models):
+                result = select_model(Path(root), input_fn=answer, output=output)
+            self.assertEqual(result['model'], 'new')
+            self.assertNotIn('Select saved provider', output.getvalue())
+            self.assertNotIn('Provider action', output.getvalue())
+            self.assertIn('Select model', output.getvalue())
+            self.assertEqual(len(prompts), 1)
+            self.assertEqual(store.credential('work'), 'synthetic-key')
+
+    def test_direct_cancel_preserves_profile(self):
+        from bishop_runtime.onboarding import select_model
+        with tempfile.TemporaryDirectory() as root:
+            store = ProfileStore(root)
+            store.save('work', 'compatible', 'https://openrouter.ai/api/v1', 'old', preset_id='openrouter')
+            with patch('bishop_runtime.onboarding._pick_model', return_value=None):
+                self.assertIsNone(select_model(Path(root), output=io.StringIO()))
+            self.assertEqual(store.active()['model'], 'old')
+
+    def test_direct_chatgpt_catalog_uses_profile_home(self):
+        from bishop_runtime.onboarding import select_model
+        with tempfile.TemporaryDirectory() as root:
+            store = ProfileStore(root)
+            store.save('account', 'chatgpt', 'https://api.openai.com/v1', 'old', preset_id='chatgpt')
+            with patch('bishop_runtime.oauth.ChatGPTAuth') as auth:
+                auth.return_value.models.return_value = [{'id': 'new', 'label': 'New'}]
+                result = select_model(Path(root), input_fn=lambda prompt: 'new', output=io.StringIO())
+                auth.assert_called_once_with(Path(root))
+            self.assertEqual(result['model'], 'new')

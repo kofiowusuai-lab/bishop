@@ -178,10 +178,26 @@ def select_profile(home, input_fn=None, output=None):
     action = choose('Provider action', [('use', 'Use saved model'), ('model', 'Choose another model'), ('back', 'Back')], input_fn=input_fn, output=output)
     if action == 'use': return store.select(selected)
     if action != 'model': return None
+    return _edit_profile_model(store, profile, input_fn, output)
+
+
+def select_model(home, input_fn=None, output=None):
+    """Open the active provider's catalog directly; provider switching is separate."""
+    output = output or sys.stdout
+    store = ProfileStore(home)
+    profile = store.active()
+    if profile is None:
+        return select_profile(home, input_fn=input_fn, output=output)
+    _say(f"Available models for {profile['name']}. Switch providers with bishop providers select; add one with bishop setup.", output)
+    return _edit_profile_model(store, profile, input_fn, output)
+
+
+def _edit_profile_model(store, profile, input_fn, output):
+    selected = profile['name']
     ident = _preset_for(profile)
     if ident == 'chatgpt':
         from .oauth import ChatGPTAuth
-        model_id = choose_chatgpt_model(ChatGPTAuth(home), input_fn=input_fn, output=output)
+        model_id = choose_chatgpt_model(ChatGPTAuth(store.home), input_fn=input_fn, output=output)
         return store.save(selected, 'chatgpt', profile['base_url'], model_id, preset_id=ident) if model_id else None
     preset = dict(PRESETS[ident])
     if ident == 'custom': preset.update(base_url=profile['base_url'], kind=profile['kind'])

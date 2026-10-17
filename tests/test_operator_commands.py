@@ -104,7 +104,7 @@ class OperatorCommandsTests(unittest.TestCase):
             self.assertNotIn('outside-content', out + err)
 
     def test_model_dispatches_existing_picker(self):
-        with tempfile.TemporaryDirectory() as directory, patch('bishop_runtime.onboarding.select_profile') as pick:
+        with tempfile.TemporaryDirectory() as directory, patch('bishop_runtime.onboarding.select_model') as pick:
             home = Path(directory)
             self.assertEqual(self.call(home, 'model')[0], 0)
             pick.assert_called_once_with(home.resolve())

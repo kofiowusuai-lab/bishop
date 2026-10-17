@@ -6,7 +6,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.3.0 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.3.1 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -22,7 +22,7 @@ Open a new terminal after `ensurepath` if your shell has not refreshed its PATH.
 
 For development in this checkout, activate `.venv` and run `bishop`.
 
-Bishop opens a finely shaded braille Bishop mark, custom wordmark and compact gold boot layout and an interactive conversation. On first launch, choose a provider and plan with the arrow keys, choose how to manage its key, then select a model from its live searchable catalog. Profile names are assigned automatically; only secrets and an optional custom endpoint require text entry. Writes and commands can be approved inline. `/help` shows chat commands; `/model` selects saved profiles and opens the model picker; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
+Bishop opens a finely shaded braille Bishop mark, custom wordmark and compact gold boot layout and an interactive conversation. On first launch, choose a provider and plan with the arrow keys, choose how to manage its key, then select a model from its live searchable catalog. Profile names are assigned automatically; only secrets and an optional custom endpoint require text entry. Writes and commands can be approved inline. `/help` shows chat commands; `/model` directly opens the active provider model picker; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
 
 ```sh
 bishop setup                   # add another saved provider/key
@@ -33,7 +33,7 @@ bishop preview                 # boot screen, no model call
 
 ### Terminal commands
 
-Use `bishop model` for provider/model menus, `bishop login` / `bishop logout` for ChatGPT authentication, and `bishop status` or `bishop doctor` for offline readiness checks. `bishop config` shows sanitized configuration; `bishop tools list` and `bishop skills list` inspect available capabilities. Existing `bishop status RUN_ID` still shows a specific run.
+Use `bishop model` for the active provider model catalog and `bishop providers select` to switch saved providers, `bishop login` / `bishop logout` for ChatGPT authentication, and `bishop status` or `bishop doctor` for offline readiness checks. `bishop config` shows sanitized configuration; `bishop tools list` and `bishop skills list` inspect available capabilities. Existing `bishop status RUN_ID` still shows a specific run.
 
 [Full command reference and Hermes capability comparison](docs/command-capabilities.md) distinguishes working commands from systems still to build.
 

@@ -104,6 +104,7 @@ def parser():
     profile_commands = profiles.add_subparsers(dest='profile_command', required=True)
     profile_commands.add_parser('list')
     profile_commands.add_parser('add')
+    profile_commands.add_parser('select', help='choose a saved provider interactively')
     for operation in ('use', 'remove'):
         sub = profile_commands.add_parser(operation); sub.add_argument('name')
     auth = commands.add_parser('auth', help='Bishop-owned ChatGPT account OAuth')
@@ -203,18 +204,19 @@ def main(argv=None):
                 run_chat(runtime, home, config, actor=args.actor)
                 return 0
             if args.command == 'model':
-                from .onboarding import select_profile
-                select_profile(home)
+                from .onboarding import select_model
+                select_model(home)
                 return 0
             if args.command == 'setup':
                 from .onboarding import setup
                 setup(home)
                 return 0
             if args.command == 'providers':
-                from .onboarding import list_profiles, setup
+                from .onboarding import list_profiles, select_profile, setup
                 from .profiles import ProfileStore
                 if args.profile_command == 'list': list_profiles(home)
                 elif args.profile_command == 'add': setup(home)
+                elif args.profile_command == 'select': select_profile(home)
                 else:
                     getattr(ProfileStore(home), 'select' if args.profile_command == 'use' else 'remove')(args.name)
                     print('Provider profile ' + args.profile_command + ' completed.')

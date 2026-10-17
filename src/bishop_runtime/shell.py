@@ -9,7 +9,7 @@ HELP = '''/help                  Show commands
 /deny [RUN] CALL        Reject a pending call
 /resume [RUN]          Continue the run
 /providers             List saved providers
-/model                 Select a saved provider
+/model                 Choose from the active provider model catalog
 /setup                 Add another provider/key
 /new SESSION           Change session
 /exit                  Leave Bishop'''
@@ -80,12 +80,12 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
                     if last: present(last)
                     continue
                 if command in ('/providers', '/model', '/setup'):
-                    from .onboarding import list_profiles, select_profile, setup
+                    from .onboarding import list_profiles, select_model, setup
                     from .config import provider_from_config
                     if command == '/providers':
                         list_profiles(home, output=output)
                     else:
-                        (select_profile if command == '/model' else setup)(home, input_fn=menu_input, output=output)
+                        (select_model if command == '/model' else setup)(home, input_fn=menu_input, output=output)
                         runtime.provider = provider_from_config(config, home=home)
                         say('Provider selection updated for the next model request.')
                     continue
