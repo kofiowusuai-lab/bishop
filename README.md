@@ -1,10 +1,12 @@
 # Bishop
 
+<img src="assets/bishop-kedolabs-agent-runtime-logo.svg" alt="Bishop by Kedolabs — engraved gold chess bishop logo for the independent AI agent runtime" width="110">
+
 **An independent personal agent runtime with durable conversations, explicit tool approvals and audit checkpoints.**
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.2.1 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.2.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -20,7 +22,7 @@ Open a new terminal after `ensurepath` if your shell has not refreshed its PATH.
 
 For development in this checkout, activate `.venv` and run `bishop`.
 
-Bishop opens an amber dot-matrix boot panel and an interactive conversation. On first launch, choose a provider and plan with the arrow keys, choose how to manage its key, then select a model from its live searchable catalog. Profile names are assigned automatically; only secrets and an optional custom endpoint require text entry. Writes and commands can be approved inline. `/help` shows chat commands; `/model` selects saved profiles and opens the model picker; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
+Bishop opens a finely shaded braille Bishop mark, custom wordmark and compact gold boot layout and an interactive conversation. On first launch, choose a provider and plan with the arrow keys, choose how to manage its key, then select a model from its live searchable catalog. Profile names are assigned automatically; only secrets and an optional custom endpoint require text entry. Writes and commands can be approved inline. `/help` shows chat commands; `/model` selects saved profiles and opens the model picker; `/setup` adds another provider/key. Narrow terminals and `NO_COLOR` are supported.
 
 ```sh
 bishop setup                   # add another saved provider/key
@@ -135,6 +137,14 @@ bishop sync
 Final response checkpoints prove that the response was persisted and all calls were resolved. **They do not prove factual correctness or task quality.** Independent QA is an explicit reviewer report; [the example](docs/qa-report.example.json) shows the schema. Fill it from actual review evidence.
 
 Set `audit.hub_url` and `BISHOP_AUDIT_TOKEN` to sync one bounded batch to your existing AEK dashboard. Sync is explicit and is never started automatically. The outbox includes run/step outcomes, check flags and artifact hashes; it excludes prompts, responses, tool arguments, memory and local artifact paths. Full conversation/tool history stays in the private Bishop home. The current AEK schema aggregates failures under `external_failure`; precise sanitized categories remain in local Bishop status.
+
+## Visual identity
+
+![Bishop terminal boot preview with a finely shaded chess bishop and custom wordmark](assets/bishop-kedolabs-terminal-boot-preview.png)
+
+Preview uses an example profile. The boot screen adapts to terminal width, keeps a compact maximum width, supports truecolor/256-color and respects `NO_COLOR`.
+
+[Download the scalable Bishop logo](assets/bishop-kedolabs-agent-runtime-logo.svg). The optional `scripts/render_terminal_preview.py` captures ANSI output as PNG for design review; it requires Pillow and a local monospaced font (`--font` overrides the macOS default). Pillow is not a runtime dependency.
 
 ## Development
 

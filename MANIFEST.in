@@ -1,3 +1,6 @@
 include .env.example
 recursive-include docs *.md *.json
 recursive-include tests *.py
+
+recursive-include assets *.svg *.png
+include scripts/render_terminal_preview.py

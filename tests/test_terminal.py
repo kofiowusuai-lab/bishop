@@ -29,19 +29,24 @@ class TerminalTests(unittest.TestCase):
         self.assertIn('Installed skills (2)', result)
         for name in names + ['research', 'code-review']:
             self.assertIn(name, result)
-        self.assertTrue(all(len(row) == 80 for row in result.splitlines() if row.startswith('│')))
+        self.assertNotIn('┌' + '─' * 78, result)
+        self.assertTrue(any('⠁' <= char <= '⣿' for char in result))
+
+    def test_refined_layout_is_bounded_on_ultrawide_terminals(self):
+        result = render_boot({'tools': ['read_file'], 'skills': []}, width=200, color=False)
+        self.assertIn('BISHOP', result)
+        self.assertIn('Available tools (1)', result)
+        self.assertIn('read_file', result)
+        self.assertNotIn('Your workspace. Your models.', result)
+        self.assertNotIn('●', result)
+        self.assertLessEqual(max(len(row) for row in result.splitlines()), 110)
 
     def test_compact_visual_layout(self):
-        result = render_boot({'tools': ['read_file'], 'skills': []}, width=42, color=False)
-        rows = result.splitlines()
-        self.assertEqual(rows[0], 'BISHOP · independent agent runtime')
-        # The silhouette's diagonal mitre cut and broad base are identity landmarks.
-        self.assertIn('      ●●●● ●●      ', rows)
-        self.assertIn('   ●●●●●●●●●●●●●   ', rows)
-        self.assertIn('Available tools (1)', rows)
-        self.assertIn('read_file', rows)
-        self.assertIn('Installed skills (0)', rows)
-        self.assertEqual(rows[-1], 'Your workspace. Your models. Your Bishop.')
+        result = render_boot({'tools':['read_file'], 'skills':[]}, width=42, color=False)
+        self.assertIn('BISHOP', result)
+        self.assertIn('read_file', result)
+        self.assertNotIn('┌' + '─' * 78, result)
+        self.assertLess(len(result.splitlines()), 24)
 
     def test_hostile_metadata_is_sanitized(self):
         value = '\x1b[31mred\x1b[0m\x1b]0;evil\x07\n\r\t\x00\u202eBAD'
@@ -62,3 +67,11 @@ class TerminalTests(unittest.TestCase):
         print_boot({'model': 'none'}, stream=stream)
         self.assertIn('BISHOP', stream.getvalue())
         self.assertNotIn('\x1b', stream.getvalue())
+
+    def test_color_fallback_keeps_gold_on_indexed_terminals(self):
+        with patch.dict('os.environ', {'TERM_PROGRAM':'Apple_Terminal'}, clear=True):
+            result = render_boot({}, width=80, color=True)
+            self.assertIn('\x1b[38;5;', result)
+            self.assertNotIn('\x1b[38;2;', result)
+        with patch.dict('os.environ', {'COLORTERM':'truecolor'}, clear=True):
+            self.assertIn('\x1b[38;2;', render_boot({}, width=80, color=True))

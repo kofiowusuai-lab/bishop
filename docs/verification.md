@@ -23,3 +23,7 @@ The update adds branded boot and interactive chat, exact inline approvals, named
 142 tests pass locally, including a matrix for every supported provider/preset and all custom transport kinds. Real PTY tests cover search, scrolling, rapid arrows, cancellation and zero-size terminal fallback. Live public OpenRouter/OpenCode catalogs were read without keys or inference. API keys remain staged until the model choice is confirmed, and stale preset routing cannot redirect a saved key. Unsupported generation/batch/native protocols are excluded from the picker.
 
 The update adds API-key Responses support and Bishop-specific OpenCode conversation headers. Real authenticated model inference remains outside this verification.
+
+## Bishop 0.2.2 visual identity
+
+148 tests pass locally. Identity, sanitization, width bounds, monochrome, truecolor and indexed-color fallback are covered. Actual terminal output was rendered and visually reviewed at 80, 100 and 200 columns, and preview startup was checked through a PTY. The SVG logo and terminal mark were reviewed together. Preview PNG metadata identifies Bishop/Kedolabs; the displayed profile is an example.

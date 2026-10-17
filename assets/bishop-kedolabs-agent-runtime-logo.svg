@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="760" viewBox="0 0 640 760" role="img" aria-labelledby="title description">
+<title id="title">Bishop — Kedolabs independent agent runtime</title>
+<desc id="description">Original warm gold chess bishop with a diagonal mitre incision, engraved collar, faceted waist and architectural plinth. Bishop by Kedolabs, https://kedolabs.com.</desc>
+<metadata>Brand: Bishop / Kedolabs; Website: https://kedolabs.com; Keywords: Bishop agent runtime, independent AI agent, Kedolabs; Copyright: Kedolabs. Licensed under MIT.</metadata>
+<defs>
+ <linearGradient id="metal" x1="0" x2="1"><stop stop-color="#76512E"/><stop offset=".23" stop-color="#B68A4D"/><stop offset=".39" stop-color="#F4DCA6"/><stop offset=".49" stop-color="#DAB879"/><stop offset=".71" stop-color="#B68A4D"/><stop offset="1" stop-color="#76512E"/></linearGradient>
+ <linearGradient id="edge" x1="0" x2="0" y2="1"><stop stop-color="#F4DCA6"/><stop offset="1" stop-color="#B68A4D"/></linearGradient>
+ <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".72" fill="#F4DCA6" opacity=".28"/></pattern>
+ <mask id="incision"><rect width="640" height="760" fill="white"/><path d="M394 122L313 249" stroke="black" stroke-width="20" stroke-linecap="round"/></mask>
+ <path id="body" d="M320 95 C301 118 254 157 227 205 C202 252 209 279 237 302 C253 315 277 321 278 338 L194 345 L194 368 L242 374 C263 397 276 434 278 468 C281 496 266 524 242 550 L206 565 L188 588 L188 608 L212 614 L212 634 L148 641 L148 663 L124 670 L124 696 L516 696 L516 670 L492 663 L492 641 L428 634 L428 614 L452 608 L452 588 L434 565 L398 550 C374 524 359 496 362 468 C364 434 377 397 398 374 L446 368 L446 345 L362 338 C363 321 387 315 403 302 C431 279 438 252 413 205 C386 157 339 118 320 95Z"/>
+ <clipPath id="shape"><use href="#body"/></clipPath>
+</defs>
+<g mask="url(#incision)">
+ <use href="#body" fill="url(#metal)"/>
+ <g clip-path="url(#shape)">
+  <path d="M295 95L267 294L298 338L284 468L273 550L245 608L210 696H259L296 608L313 550L321 468L320 338L307 294L320 95Z" fill="#F4DCA6" opacity=".23"/>
+  <path d="M365 118L387 279L347 338L347 468L367 550L395 608L435 696H467L425 608L389 550L367 468L376 338L415 279Z" fill="#362719" opacity=".26"/>
+  <path d="M194 351H446M194 365H446M218 380H422M188 590H452M188 606H452M150 647H490M125 676H515" stroke="#76512E" stroke-width="3" opacity=".8"/>
+  <path d="M194 345H446M206 565H434M188 588H452M148 641H492M124 670H516M124 695H516" stroke="url(#edge)" stroke-width="2" opacity=".9"/>
+  <use href="#body" fill="url(#grain)"/>
+ </g>
+ <use href="#body" fill="none" stroke="#DAB879" stroke-width="1.5" opacity=".7"/>
+</g>
+<circle cx="320" cy="62" r="15" fill="url(#metal)" stroke="#DAB879" stroke-width="1"/>
+</svg>
