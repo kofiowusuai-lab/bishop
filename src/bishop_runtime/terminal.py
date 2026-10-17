@@ -65,6 +65,29 @@ def _indexed_color(r, g, b):
     return 232 + grey if grey_error < cube_error else cube
 
 
+_CONVERSATION_PALETTE = {
+    'user': (117, 207, 218),
+    'bishop': (234, 209, 156),
+    'system': (155, 161, 169),
+    'error': (244, 128, 128),
+    'approval': (244, 196, 97),
+}
+
+
+def conversation_prefix(role, output):
+    if 'NO_COLOR' in os.environ or not output.isatty():
+        return ''
+    r, g, b = _CONVERSATION_PALETTE[role]
+    if os.environ.get('COLORTERM', '').lower() in ('truecolor', '24bit') or '-direct' in os.environ.get('TERM', ''):
+        return f'\x1b[38;2;{r};{g};{b}m'
+    return f'\x1b[38;5;{_indexed_color(r,g,b)}m'
+
+
+def conversation_style(text, role, output):
+    prefix = conversation_prefix(role, output)
+    return prefix + text + '\x1b[0m' if prefix else text
+
+
 def render_boot(info: dict, width=None, color=None) -> str:
     """Compose a compact identity and truthful startup information."""
     from .identity import emblem

@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from .terminal import conversation_style
 
 _PHASES={'started':'Starting','resumed':'Resuming','interrupted':'Interrupted','run_started':'Starting','model_started':'Waiting for model','tool_started':'Running tool','tool_completed':'Tool finished','awaiting_approval':'Awaiting approval','needs_reconciliation':'Needs reconciliation','run_completed':'Completed','completed':'Completed','failed':'Failed','run_failed':'Failed','heartbeat':'Working','step_limit':'Step limit reached'}
 _STATUSES={'interrupted','running','completed','failed','awaiting_approval','needs_reconciliation','step_limit'}
@@ -37,7 +38,8 @@ class TerminalProgress:
         if self.output.isatty():
             self.open_line=snapshot.get('status')=='running'
             width=max(1,shutil.get_terminal_size((80,24)).columns-1)
-            self.output.write('\r\x1b[2K'+text[:width]+ ('' if self.open_line else '\n'))
+            tone='error' if snapshot.get('status') in ('failed','interrupted','step_limit') else 'approval' if snapshot.get('status') in ('awaiting_approval','needs_reconciliation') else 'system'
+            self.output.write('\r\x1b[2K'+conversation_style(text[:width],tone,self.output)+ ('' if self.open_line else '\n'))
         else:self.output.write(text+'\n')
         self.output.flush()
     def close(self):

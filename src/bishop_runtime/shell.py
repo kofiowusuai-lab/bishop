@@ -1,7 +1,8 @@
 """Human terminal conversation UI over the independent Bishop runtime."""
 import json
+import re
 import sys
-from .terminal import safe_text
+from .terminal import safe_text, conversation_style, conversation_prefix
 
 HELP = '''/help                  Show commands
 /version               Show running and installed versions
@@ -19,6 +20,7 @@ HELP = '''/help                  Show commands
 
 
 def run_chat(runtime, home, config, session='local', actor='local', input_fn=None, output=None):
+    builtin_input = input_fn is None
     menu_input = input_fn
     input_fn = input_fn or input
     output = output or sys.stdout
@@ -26,15 +28,30 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
         from .monitor_integration import terminal_watch
         with terminal_watch(runtime, config, output, actor=actor):
             return action()
-    def say(text):
-        print('\n'.join(safe_text(line) for line in str(text).split('\n')), file=output)
+    def say(text, role='system'):
+        cleaned='\n'.join(safe_text(line) for line in str(text).split('\n'))
+        print(conversation_style(cleaned, role, output), file=output)
+    def ask(prompt, role='user'):
+        prefix=conversation_prefix(role, output)
+        rendered=conversation_style(prompt, role, output) + prefix
+        if builtin_input and prefix:
+            try:
+                import readline  # noqa: F401 -- enables zero-width prompt markers
+                rendered=re.sub(r'(\x1b\[[0-9;]*m)', r'\001\1\002', rendered)
+            except ImportError:
+                pass
+        try:
+            return input_fn(rendered)
+        finally:
+            if prefix:
+                output.write('\x1b[0m');output.flush()
     def present(run):
         if run['status'] == 'completed':
-            say('\nBishop › ' + (run['output'] or '(Empty answer)') + '\n')
+            say('\nBishop › ' + (run['output'] or '(Empty answer)') + '\n', 'bishop')
         else:
-            say(f"Run {run['id']} · {run['status']}")
+            say(f"Run {run['id']} · {run['status']}", 'error' if run['status'] in ('failed','step_limit','needs_reconciliation') else 'approval')
             if run.get('error'):
-                say(run['error'])
+                say(run['error'], 'error')
                 if run['error'] == 'provider_failed':
                     say('Check the selected model, key and endpoint. No automatic retry was made.')
             for call in run.get('pending', []):
@@ -46,9 +63,9 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
             if not pending:
                 break
             call = pending[0]
-            say(f"\nApproval needed: {call['name']} ({call['id']})")
+            say(f"\nApproval needed: {call['name']} ({call['id']})", 'approval')
             say(json.dumps(call['arguments'], indent=2, ensure_ascii=False))
-            answer = input_fn('[y] approve · [n] deny · [l/Enter] later › ').strip().lower()
+            answer = ask('[y] approve · [n] deny · [l/Enter] later › ', 'approval').strip().lower()
             if answer not in ('y', 'yes', 'n', 'no'):
                 present(run)
                 return run
@@ -65,7 +82,7 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
         present(last)
     while True:
         try:
-            text = input_fn('You › ').strip()
+            text = ask('You › ').strip()
         except (EOFError, StopIteration):
             break
         if not text:
@@ -138,5 +155,5 @@ def run_chat(runtime, home, config, session='local', actor='local', input_fn=Non
                 say('Bishop is working…')
                 last = settle(execute(lambda: runtime.run(session, text, actor=actor)))
         except (ValueError, RuntimeError) as exc:
-            say('Bishop: ' + str(exc))
+            say('Bishop: ' + str(exc), 'error')
     say('Bishop stopped. Your conversation and checkpoints are saved.')
