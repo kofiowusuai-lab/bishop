@@ -1,0 +1,9 @@
+{
+  "builder": "bishop",
+  "reviewer": "human-operator",
+  "requires_independent_review": true,
+  "declared_pass": true,
+  "required_checks": ["task_outcome_verified"],
+  "checks": {"task_outcome_verified": true},
+  "defects": []
+}
