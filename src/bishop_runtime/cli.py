@@ -89,6 +89,16 @@ def parser():
     p.add_argument('--no-color', action='store_true', help='disable terminal colors')
     commands = p.add_subparsers(dest='command')
     commands.add_parser('setup', help='add a saved provider with private key entry')
+    commands.add_parser('model', help='choose a provider or model from searchable menus')
+    commands.add_parser('doctor', help='check local configuration without network access')
+    q = commands.add_parser('config', help='show sanitized local configuration')
+    q.add_argument('config_command', nargs='?', choices=('show',), default='show')
+    q = commands.add_parser('tools', help='list enabled runtime tools')
+    q.add_argument('tools_command', nargs='?', choices=('list',), default='list')
+    q = commands.add_parser('skills', help='list or read owner-installed skills')
+    subs = q.add_subparsers(dest='skills_command')
+    subs.add_parser('list')
+    q = subs.add_parser('show'); q.add_argument('name')
     commands.add_parser('preview', help='show the Bishop startup screen without model calls')
     profiles = commands.add_parser('providers', help='manage multiple saved providers and keys')
     profile_commands = profiles.add_subparsers(dest='profile_command', required=True)
@@ -99,9 +109,12 @@ def parser():
     auth = commands.add_parser('auth', help='Bishop-owned ChatGPT account OAuth')
     auth_commands = auth.add_subparsers(dest='auth_command', required=True)
     auth_login = auth_commands.add_parser('login')
-    auth_login.add_argument('--model', help='model available to your ChatGPT account')
-    auth_login.add_argument('--name', default='chatgpt')
-    auth_login.add_argument('--no-browser', action='store_true')
+    login = commands.add_parser('login', help='log in with Bishop-owned ChatGPT OAuth')
+    commands.add_parser('logout', help='clear Bishop-owned ChatGPT OAuth credentials')
+    for login_parser in (auth_login, login):
+        login_parser.add_argument('--model', help='model available to your ChatGPT account')
+        login_parser.add_argument('--name', default='chatgpt')
+        login_parser.add_argument('--no-browser', action='store_true')
     auth_commands.add_parser('status')
     auth_commands.add_parser('logout')
     commands.add_parser('init', help='initialize private local configuration; no network')
@@ -110,7 +123,7 @@ def parser():
     chat.add_argument('text', nargs='?')
     chat.add_argument('--session', default='local')
     commands.add_parser('sessions', help='list local sessions')
-    status = commands.add_parser('status'); status.add_argument('run')
+    status = commands.add_parser('status', help='show offline readiness, or inspect a persisted run'); status.add_argument('run', nargs='?')
     for name in ('approve', 'deny'):
         q = commands.add_parser(name); q.add_argument('run'); q.add_argument('call')
     q = commands.add_parser('resume'); q.add_argument('run')
@@ -161,7 +174,15 @@ def main(argv=None):
     try:
         if args.no_color:
             os.environ['NO_COLOR'] = '1'
-        if args.command in (None, 'preview', 'setup', 'providers', 'auth'):
+        if args.command in ('doctor', 'config', 'tools', 'skills') or (args.command == 'status' and args.run is None):
+            from .operator import report
+            value, code = report(home, args.command, getattr(args, 'name', None) if args.command == 'skills' else None)
+            _emit(value)
+            return code
+        if args.command in ('login', 'logout'):
+            args.auth_command = args.command
+            args.command = 'auth'
+        if args.command in (None, 'preview', 'setup', 'model', 'providers', 'auth'):
             init_home(home)
             config = load_config(home)
             if args.command in (None, 'preview'):
@@ -180,6 +201,10 @@ def main(argv=None):
                 runtime, memory = _runtime(home, config)
                 from .shell import run_chat
                 run_chat(runtime, home, config, actor=args.actor)
+                return 0
+            if args.command == 'model':
+                from .onboarding import select_profile
+                select_profile(home)
                 return 0
             if args.command == 'setup':
                 from .onboarding import setup

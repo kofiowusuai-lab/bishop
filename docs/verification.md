@@ -27,3 +27,9 @@ The update adds API-key Responses support and Bishop-specific OpenCode conversat
 ## Bishop 0.2.2 visual identity
 
 148 tests pass locally. Identity, sanitization, width bounds, monochrome, truecolor and indexed-color fallback are covered. Actual terminal output was rendered and visually reviewed at 80, 100 and 200 columns, and preview startup was checked through a PTY. The SVG logo and terminal mark were reviewed together. Preview PNG metadata identifies Bishop/Kedolabs; the displayed profile is an example.
+
+## Bishop 0.3.0 operator commands
+
+161 tests pass locally with ResourceWarning promoted to errors, including 13 new operator-command regressions. Model selection and ChatGPT login/logout aliases delegate to existing flows. Offline status, doctor, configuration, tools and skills inspection are checked without constructing providers, making network requests or mutating initialized/uninitialized homes. Doctor and live providers share pure transport validation. Tests cover malformed URL types, invalid active profiles, secret-bearing endpoint redaction, skill symlink rejection and Markdown preservation.
+
+Independent review identified incomplete profile validation and malformed URL handling; both are fixed with regressions. Gitleaks found no leaks and Git whitespace checks pass. Live authentication and provider inference were not performed for this command release. The command reference explicitly identifies unimplemented Hermes subsystems.

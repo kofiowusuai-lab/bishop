@@ -6,7 +6,7 @@
 
 Bishop owns its model loop, tool dispatch, memory, skills and Telegram channel. It does not run on Hermes or delegate execution to another agent framework. [Agent Experience Kit](https://github.com/kofiowusuai-lab/agent-experience-kit) is its checkpoint and audit library, pinned to a released commit.
 
-Version 0.2.2 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
+Version 0.3.0 is a local-first alpha. MIT licensed. Python 3.10+; Git is needed to install the pinned AEK dependency. Commands currently target macOS/Linux.
 
 ## Launch Bishop
 
@@ -30,6 +30,12 @@ bishop providers list          # redacted saved profiles
 bishop providers use work      # explicitly select one
 bishop preview                 # boot screen, no model call
 ```
+
+### Terminal commands
+
+Use `bishop model` for provider/model menus, `bishop login` / `bishop logout` for ChatGPT authentication, and `bishop status` or `bishop doctor` for offline readiness checks. `bishop config` shows sanitized configuration; `bishop tools list` and `bishop skills list` inspect available capabilities. Existing `bishop status RUN_ID` still shows a specific run.
+
+[Full command reference and Hermes capability comparison](docs/command-capabilities.md) distinguishes working commands from systems still to build.
 
 Profiles can hold separate OpenCode, Claude API, OpenRouter, OpenAI API, Ollama, LM Studio and custom compatible credentials. OpenCode has Zen, Go and Free plan menus. Model choices automatically select the matching chat, Claude or Responses protocol; there is no automatic paid fallback. Secrets are saved separately in private `credentials.json`, bound to the exact endpoint and protocol. Provider-specific environment variables override saved keys. These private files are not encrypted at rest.
 

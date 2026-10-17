@@ -63,23 +63,31 @@ class ScriptedProvider:
         return _validate_reply(self.responses.pop(0))
 
 
+def validate_provider_settings(base_url, model, timeout=30, max_tokens=1024):
+    """Validate transport settings without creating a client or contacting a server."""
+    if not isinstance(base_url, str):
+        raise ValueError('invalid provider URL')
+    parsed = urllib.parse.urlsplit(base_url)
+    local = parsed.hostname == 'localhost'
+    try:
+        local = local or ipaddress.ip_address(parsed.hostname or '').is_loopback
+    except ValueError:
+        pass
+    if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username
+            or parsed.password or parsed.query or parsed.fragment or (parsed.scheme == 'http' and not local)):
+        raise ValueError('provider URL requires HTTPS or loopback HTTP, without credentials or query')
+    if not isinstance(model, str) or not model.strip() or len(model) > 200:
+        raise ValueError('configure an explicit model')
+    if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 120:
+        raise ValueError('timeout must be between zero and 120 seconds')
+    if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or not 1 <= max_tokens <= 32768:
+        raise ValueError('invalid max_tokens')
+    return parsed
+
+
 class HTTPProvider:
     def __init__(self, base_url, model, api_key=None, timeout=30, max_tokens=1024, extra_headers=None):
-        parsed = urllib.parse.urlsplit(base_url)
-        local = parsed.hostname == 'localhost'
-        try:
-            local = local or ipaddress.ip_address(parsed.hostname or '').is_loopback
-        except ValueError:
-            pass
-        if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username
-                or parsed.password or parsed.query or parsed.fragment or (parsed.scheme == 'http' and not local)):
-            raise ValueError('provider URL requires HTTPS or loopback HTTP, without credentials or query')
-        if not isinstance(model, str) or not model.strip() or len(model) > 200:
-            raise ValueError('configure an explicit model')
-        if not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 120:
-            raise ValueError('timeout must be between zero and 120 seconds')
-        if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or not 1 <= max_tokens <= 32768:
-            raise ValueError('invalid max_tokens')
+        parsed = validate_provider_settings(base_url, model, timeout, max_tokens)
         if api_key is not None and (not isinstance(api_key, str) or '\n' in api_key or '\r' in api_key):
             raise ValueError('invalid provider credential')
         self.extra_headers = {}
